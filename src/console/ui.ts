@@ -1,88 +1,135 @@
 // Console UI — one served HTML file, zero dependencies.
-// Design tokens (locked in the plan): ink #0B0E16, card #151A28, line #262D40,
-// text #F2F4F9, mute #8A93AB, foil #C9A96A. RAG green/amber/red reserved for
-// meaning. Signature: ticket-shaped pass cards with notched edges; staleness
-// as a visible wear state. ui-monospace carries the boarding-pass vernacular.
 
 export function renderConsolePage(): string {
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>StatusPass — Console</title>
+<title>StatusPass</title>
 <style>
   :root{--ink:#0B0E16;--card:#151A28;--line:#262D40;--text:#F2F4F9;--mute:#8A93AB;--foil:#C9A96A;
         --green:#5FB98A;--amber:#D9A441;--red:#D96C6C;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--ink);color:var(--text);font:16px/1.5 -apple-system,system-ui,sans-serif}
-  main{max-width:720px;margin:0 auto;padding:20px 16px 80px}
-  header{display:flex;align-items:baseline;gap:10px;margin:8px 0 20px}
-  header h1{font-size:1.05rem;margin:0;letter-spacing:.02em}
-  header .foil{color:var(--foil);font-family:var(--mono);font-size:.75rem;letter-spacing:.14em}
-  nav{display:flex;gap:6px;margin-bottom:22px}
-  nav button{flex:1;padding:10px 0;border-radius:10px;border:1px solid var(--line);background:none;color:var(--mute);font-size:.9rem;cursor:pointer}
-  nav button[aria-current="true"]{background:var(--card);color:var(--text);border-color:var(--foil)}
-  nav button:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--foil);outline-offset:2px}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--ink);color:var(--text);font:16px/1.5 -apple-system,system-ui,sans-serif;min-height:100vh}
+  main{max-width:680px;margin:0 auto;padding:16px 16px 100px}
 
-  /* ── the signature: ticket cards ── */
-  .pass{position:relative;background:var(--card);border:1px solid var(--line);border-radius:14px;
-        padding:16px 18px 14px 22px;margin-bottom:14px;overflow:hidden;cursor:pointer}
-  .pass::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--band,#2E3A5C)}
-  .pass::after{content:"";position:absolute;right:-8px;top:50%;width:16px;height:16px;border-radius:50%;
-        background:var(--ink);border:1px solid var(--line);transform:translateY(-50%)}
-  .pass .who{font-size:.8rem;color:var(--mute);letter-spacing:.08em;text-transform:uppercase}
-  .pass .phase{font-family:var(--mono);font-size:1.3rem;letter-spacing:.04em;margin:2px 0 8px}
-  .pass .meta{display:flex;gap:8px;align-items:center;font-size:.78rem;font-family:var(--mono);color:var(--mute)}
-  .chip{padding:2px 8px;border-radius:99px;border:1px solid var(--line)}
+  /* header */
+  .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+  .topbar h1{font-size:1.1rem;margin:0;font-weight:700;letter-spacing:.01em}
+  .topbar .badge{font-size:.65rem;font-family:var(--mono);color:var(--foil);letter-spacing:.14em;border:1px solid var(--foil);border-radius:4px;padding:2px 6px;margin-left:8px}
+  .add-btn{background:var(--foil);color:var(--ink);border:none;border-radius:10px;padding:9px 18px;font-size:.9rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap}
+  .add-btn svg{width:16px;height:16px;fill:currentColor}
+
+  /* tabs */
+  nav{display:flex;gap:4px;margin-bottom:20px;background:var(--card);border-radius:12px;padding:4px;border:1px solid var(--line)}
+  nav button{flex:1;padding:9px 0;border-radius:9px;border:none;background:none;color:var(--mute);font-size:.88rem;cursor:pointer;transition:all .15s;font-weight:500}
+  nav button[aria-current="true"]{background:var(--ink);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.4)}
+  button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--foil);outline-offset:2px}
+
+  /* client pass cards */
+  .pass{position:relative;background:var(--card);border:1px solid var(--line);border-radius:16px;
+        padding:16px 20px 14px 24px;margin-bottom:12px;overflow:hidden;cursor:pointer;
+        display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .pass::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--band,#2E3A5C);border-radius:16px 0 0 16px}
+  .pass:hover{border-color:var(--foil)}
+  .pass-left{flex:1;min-width:0}
+  .pass-name{font-size:1rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pass-status{font-size:.8rem;color:var(--mute);margin-top:2px}
+  .pass-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0}
+  .phase-pill{font-family:var(--mono);font-size:.75rem;letter-spacing:.06em;padding:4px 10px;border-radius:99px;
+              background:var(--ink);border:1px solid var(--line);white-space:nowrap}
+  .chip{font-size:.72rem;padding:2px 8px;border-radius:99px;border:1px solid var(--line);font-family:var(--mono)}
   .chip.fresh{color:var(--green);border-color:var(--green)}
   .chip.quiet{color:var(--amber);border-color:var(--amber)}
   .chip.stale{color:var(--red);border-color:var(--red)}
-  .chip.rag-green{color:var(--green)}.chip.rag-yellow{color:var(--amber)}.chip.rag-red{color:var(--red)}
+  .arrow{color:var(--mute);font-size:1.1rem}
 
-  /* ── internal status board ── */
-  .board{display:flex;gap:10px;overflow-x:auto;padding-bottom:8px;-webkit-overflow-scrolling:touch}
-  .col{min-width:150px;flex:1;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px}
-  .col h3{margin:0 0 10px;font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;color:var(--mute);text-transform:uppercase}
-  .col.dragover{border-color:var(--foil)}
-  .tk{background:var(--ink);border:1px solid var(--line);border-radius:9px;padding:9px 10px;margin-bottom:8px;
-      font-size:.82rem;cursor:grab;position:relative}
-  .tk::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:3px 0 0 3px;background:var(--band,#2E3A5C)}
-  .tk:active{cursor:grabbing}
-  .boardgroup{margin-bottom:20px}
-  .boardgroup>label{margin-top:0}
-  .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:14px}
-  label{display:block;font-size:.72rem;letter-spacing:.09em;color:var(--mute);text-transform:uppercase;margin:14px 0 6px}
-  input,select,textarea{width:100%;padding:11px;border-radius:10px;border:1px solid var(--line);
-        background:var(--ink);color:var(--text);font-size:.95rem}
-  textarea{font-family:var(--mono);min-height:84px;resize:vertical}
+  /* panels / forms */
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;margin-bottom:14px}
+  .panel-title{font-size:1rem;font-weight:700;margin:0 0 16px}
+  .field-label{font-size:.72rem;letter-spacing:.09em;color:var(--mute);text-transform:uppercase;margin:14px 0 6px;display:block}
+  .hint{font-size:.78rem;color:var(--mute);margin-top:3px;line-height:1.4}
+  input,select,textarea{width:100%;padding:11px 13px;border-radius:10px;border:1px solid var(--line);
+        background:var(--ink);color:var(--text);font-size:.95rem;font-family:inherit}
+  textarea{min-height:80px;resize:vertical}
   .row{display:flex;gap:10px}.row>*{flex:1}
-  .btn{margin-top:16px;padding:12px 18px;border-radius:11px;border:none;background:var(--foil);color:var(--ink);
-        font-weight:650;font-size:.95rem;cursor:pointer;width:100%}
-  .btn.ghost{background:none;border:1px solid var(--line);color:var(--mute)}
-  .msg{margin-top:12px;font-size:.88rem}.msg.ok{color:var(--green)}.msg.err{color:var(--red)}
-  .empty{color:var(--mute);text-align:center;padding:40px 0;font-size:.95rem}
-  /* ── first-run onboarding ── */
-  .ob{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:28px 22px;text-align:center}
-  .ob .step{font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;color:var(--foil);margin-bottom:10px}
-  .ob h2{font-size:1.25rem;margin:0 0 10px;line-height:1.35}
-  .ob p{color:var(--mute);font-size:.95rem;margin:0 auto 6px;max-width:34ch;line-height:1.55}
-  .ob .dots{display:flex;gap:8px;justify-content:center;margin:22px 0 4px}
-  .ob .dots i{width:7px;height:7px;border-radius:50%;background:var(--line)}
-  .ob .dots i.on{background:var(--foil)}
-  .ob .skip{display:block;margin-top:14px;color:var(--mute);font-size:.82rem;background:none;border:none;cursor:pointer;width:100%}
-  .ob code{display:block;margin:14px 0 4px}
-  .maprow{display:flex;gap:8px;margin-bottom:8px;font-family:var(--mono);font-size:.9rem}
-  .maprow span{align-self:center;color:var(--mute)}
-  code{font-family:var(--mono);font-size:.82rem;color:var(--foil);word-break:break-all}
-  @media (prefers-reduced-motion:no-preference){.pass{transition:border-color .15s}.pass:hover{border-color:var(--foil)}}
+  .btn{margin-top:14px;padding:13px 18px;border-radius:12px;border:none;background:var(--foil);color:var(--ink);
+        font-weight:700;font-size:.95rem;cursor:pointer;width:100%;display:block}
+  .btn.secondary{background:none;border:1px solid var(--line);color:var(--mute)}
+  .btn.danger{background:none;border:1px solid var(--red);color:var(--red)}
+  .btn-row{display:flex;gap:8px;margin-top:14px}.btn-row .btn{margin-top:0}
+  .msg{margin-top:10px;font-size:.85rem;padding:8px 12px;border-radius:8px;display:none}
+  .msg.show{display:block}
+  .msg.ok{background:rgba(95,185,138,.12);color:var(--green)}
+  .msg.err{background:rgba(217,108,108,.12);color:var(--red)}
+
+  /* board */
+  .board-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px}
+  .board{display:flex;gap:10px;min-width:max-content;padding:4px 0 8px}
+  .col{width:160px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 10px 14px}
+  .col-head{font-size:.7rem;font-family:var(--mono);letter-spacing:.1em;color:var(--mute);text-transform:uppercase;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+  .col.dragover,.col.tapover{border-color:var(--foil);background:rgba(201,169,106,.06)}
+  .tk{background:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px 10px 10px 14px;
+      margin-bottom:8px;font-size:.84rem;cursor:grab;position:relative;line-height:1.35}
+  .tk::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:10px 0 0 10px;background:var(--band,#2E3A5C)}
+  .tk:active{cursor:grabbing;opacity:.7}
+  .tk.selected{border-color:var(--foil);box-shadow:0 0 0 2px rgba(201,169,106,.3)}
+  .board-hint{font-size:.78rem;color:var(--mute);text-align:center;margin-bottom:12px;padding:8px;background:var(--card);border-radius:8px;border:1px solid var(--line)}
+
+  /* setup link box */
+  .link-box{background:var(--ink);border:1px solid var(--foil);border-radius:10px;padding:12px 14px;margin:12px 0;
+            font-family:var(--mono);font-size:.8rem;color:var(--foil);word-break:break-all;line-height:1.5}
+  .success-banner{background:rgba(95,185,138,.1);border:1px solid var(--green);border-radius:12px;
+                  padding:14px 16px;margin-bottom:14px;font-size:.9rem;color:var(--green)}
+  .success-banner strong{display:block;margin-bottom:4px;font-size:.95rem}
+
+  /* empty states */
+  .empty{text-align:center;padding:48px 20px;color:var(--mute)}
+  .empty .emoji{font-size:2.5rem;display:block;margin-bottom:12px}
+  .empty h3{margin:0 0 6px;color:var(--text);font-size:1.05rem}
+  .empty p{margin:0 auto;max-width:28ch;font-size:.9rem;line-height:1.5}
+
+  /* back link */
+  .back-link{display:inline-flex;align-items:center;gap:6px;color:var(--mute);font-size:.88rem;
+             background:none;border:none;cursor:pointer;padding:0;margin-bottom:16px}
+  .back-link:hover{color:var(--text)}
+
+  /* deliverables */
+  .deliv-item{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);gap:10px}
+  .deliv-item:last-child{border-bottom:none}
+  .del-x{background:none;border:none;color:var(--mute);cursor:pointer;font-size:1.1rem;padding:4px 8px;border-radius:6px;flex-shrink:0}
+  .del-x:hover{color:var(--red)}
+
+  /* map rows */
+  .maprow{display:flex;gap:8px;margin-bottom:8px;align-items:center}
+  .maprow span{color:var(--mute);flex-shrink:0}
+  .maprow input{font-size:.88rem;padding:8px 10px}
+  .del-row{background:none;border:none;color:var(--mute);cursor:pointer;font-size:1.1rem;padding:4px 6px}
+
+  @media(max-width:480px){
+    .col{width:140px}
+    .add-btn span{display:none}
+  }
 </style></head>
 <body><main>
-  <header><h1>StatusPass</h1><span class="foil">CONSOLE</span></header>
-  <nav role="tablist">
-    <button data-tab="passes" aria-current="true">Passes</button>
-    <button data-tab="board">Board</button>
-    <button data-tab="mapping">Mapping</button>
-    <button data-tab="issue">Issue a pass</button>
-  </nav>
-  <section id="view"></section>
+
+<div class="topbar">
+  <div style="display:flex;align-items:center">
+    <h1>StatusPass</h1>
+    <span class="badge">CONSOLE</span>
+  </div>
+  <button class="add-btn" id="globalAdd" onclick="showIssue()">
+    <svg viewBox="0 0 20 20"><path d="M10 4a1 1 0 011 1v4h4a1 1 0 010 2h-4v4a1 1 0 01-2 0v-4H5a1 1 0 010-2h4V5a1 1 0 011-1z"/></svg>
+    <span>Add Client</span>
+  </button>
+</div>
+
+<nav role="tablist">
+  <button data-tab="clients" aria-current="true">👤 Clients</button>
+  <button data-tab="board">📋 Board</button>
+  <button data-tab="settings">⚙ Settings</button>
+</nav>
+
+<section id="view"></section>
+
 <script>
 const KEY = new URLSearchParams(location.search).get('key') || localStorage.getItem('sp_key') || '';
 if (KEY) localStorage.setItem('sp_key', KEY);
@@ -95,279 +142,380 @@ const api = (path, opts={}) => fetch(path, {...opts, headers:{'content-type':'ap
 const view = document.getElementById('view');
 const el = (h) => { const d=document.createElement('div'); d.innerHTML=h; return d; };
 const esc = (s) => String(s??'').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-async function copy(text, btn){
-  try{ await navigator.clipboard.writeText(text); const t=btn.textContent; btn.textContent='Copied';
-    setTimeout(()=>btn.textContent=t,1500); }catch{ window.prompt('Copy this link:', text); }
+const msg = (el,type,text) => { el.textContent=text; el.className='msg show '+type; };
+async function copy(text, btn){ try{ await navigator.clipboard.writeText(text);
+  const t=btn.textContent; btn.textContent='Copied!'; setTimeout(()=>btn.textContent=t,1500); }
+  catch{ window.prompt('Copy this link:', text); } }
+function setTab(name){
+  document.querySelectorAll('nav button').forEach(x=>x.removeAttribute('aria-current'));
+  const b=document.querySelector('nav button[data-tab="'+name+'"]');
+  if(b) b.setAttribute('aria-current','true');
 }
 
-// ── Passes tab ──
-async function showPasses(){
-  view.innerHTML = '<div class="empty">Loading…</div>';
+// ── Clients tab ──
+async function showClients(){
+  setTab('clients');
+  view.innerHTML = '<div class="empty"><span class="emoji">⏳</span><h3>Loading your clients...</h3></div>';
   try {
     const {passes} = await api('/api/passes');
     if (!passes.length){
-      if (localStorage.getItem('sp_onboarded')) {
-        view.innerHTML = '<div class="empty">No passes yet — issue one from the Issue tab.</div>';
-      } else {
-        showOnboarding();
-      }
-      return; }
+      view.innerHTML = '';
+      view.appendChild(el('<div class="empty">'+
+        '<span class="emoji">👥</span>'+
+        '<h3>No clients yet</h3>'+
+        '<p>Click <strong>Add Client</strong> above to create your first wallet pass.</p>'+
+        '</div>').firstChild);
+      return;
+    }
     view.innerHTML = '';
-    for (const p of passes){
+    const sortedPasses = [...passes].sort((a,b)=>a.recipientLabel.localeCompare(b.recipientLabel));
+    for (const p of sortedPasses){
       const wear = p.quietDays <= 5 ? 'fresh' : p.quietDays <= 9 ? 'quiet' : 'stale';
-      const wearText = p.quietDays === 0 ? 'updated today' : 'updated '+p.quietDays+'d ago';
-      const card = el('<article class="pass" tabindex="0" style="--band:'+(p.profile==='client-delivery'?'#2E3A5C':'#3C3450')+'">'+
-        '<div class="who">'+esc(p.recipientLabel)+' · '+(p.profile==='client-delivery'?'Client':'Program')+'</div>'+
-        '<div class="phase">'+esc(p.currentPhase.toUpperCase())+'</div>'+
-        '<div class="meta"><span class="chip '+wear+'">'+wearText+'</span>'+
-        (p.currentRag?'<span class="chip rag-'+p.currentRag+'">'+p.currentRag.toUpperCase()+'</span>':'')+
-        '</div></article>').firstChild;
+      const wearLabel = p.quietDays === 0 ? 'Updated today' : p.quietDays===1 ? 'Updated yesterday' : 'Updated '+p.quietDays+' days ago';
+      const typeLabel = p.profile==='client-delivery' ? 'Client project' : 'Internal project';
+      const card = el('<div class="pass" tabindex="0" style="--band:'+(p.profile==='client-delivery'?'#2E3A5C':'#3C3450')+'">'+
+        '<div class="pass-left">'+
+          '<div class="pass-name">'+esc(p.recipientLabel)+'</div>'+
+          '<div class="pass-status">'+typeLabel+' · <span class="chip '+wear+'" style="font-size:.7rem">'+wearLabel+'</span></div>'+
+        '</div>'+
+        '<div class="pass-right">'+
+          '<div class="phase-pill">'+esc(p.currentPhase)+'</div>'+
+        '</div>'+
+        '<span class="arrow">›</span>'+
+        '</div>').firstChild;
       card.onclick = () => showDetail(p.id);
       card.onkeydown = (e) => { if(e.key==='Enter') showDetail(p.id); };
       view.appendChild(card);
     }
-  } catch(e){ view.innerHTML = '<div class="empty">'+esc(e.message)+'</div>'; }
+  } catch(e){ view.innerHTML = '<div class="empty"><span class="emoji">⚠️</span><h3>Something went wrong</h3><p>'+esc(e.message)+'</p></div>'; }
 }
 
-// ── Detail + manual update ──
+// ── Detail / manage a client pass ──
 async function showDetail(id){
-  view.innerHTML = '<div class="empty">Loading…</div>';
+  setTab('clients');
+  view.innerHTML = '<div class="empty"><span class="emoji">⏳</span><h3>Loading...</h3></div>';
   try {
-    const {pass, resolvedRules} = await api('/api/passes/'+id);
+    const {pass} = await api('/api/passes/'+id);
     view.innerHTML = '';
+    const back = el('<button class="back-link" id="bk">← Back to clients</button>').firstChild;
+    back.onclick = showClients;
+    view.appendChild(back);
+
+    // Info card
     view.appendChild(el('<div class="panel">'+
-      '<div class="who" style="color:var(--mute);font-size:.8rem;text-transform:uppercase;letter-spacing:.08em">'+esc(pass.recipientLabel)+'</div>'+
-      '<div class="phase" style="font-family:var(--mono);font-size:1.4rem;margin:4px 0 10px">'+esc(pass.currentPhase.toUpperCase())+'</div>'+
-      (pass.primaryLink?'<div style="font-size:.85rem;color:var(--mute)">Pass link: <code>'+esc(pass.primaryLink.label)+'</code></div>':'')+
-      '<div style="font-size:.82rem;color:var(--mute);margin-top:10px">Voice: '+esc(resolvedRules.voice.tone)+
-      ' · Notifies on: <span style="font-family:var(--mono)">'+resolvedRules.significance.notifyOn.map(esc).join(', ')+'</span></div>'+
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start">'+
+        '<div>'+
+          '<div style="font-size:1.2rem;font-weight:700">'+esc(pass.recipientLabel)+'</div>'+
+          '<div style="color:var(--mute);font-size:.85rem;margin-top:2px">'+(pass.profile==='client-delivery'?'Client project':'Internal project')+'</div>'+
+        '</div>'+
+        '<div class="phase-pill" style="font-size:.85rem;padding:6px 14px">'+esc(pass.currentPhase)+'</div>'+
+      '</div>'+
+      (pass.addUrl ? '<div style="margin-top:12px;font-size:.82rem;color:var(--mute)">✅ Pass installed — wallet updates go to this client</div>' :
+                     '<div style="margin-top:12px;font-size:.82rem;color:var(--amber)">⏳ Waiting for client to install their wallet pass</div>')+
       '</div>').firstChild);
-    const form = el('<div class="panel"><label>Send an update</label>'+
-      '<textarea id="note" placeholder="finished the homepage build, moving to review"></textarea>'+
-      '<label>Move to phase (optional)</label><input id="phase" placeholder="Review">'+
-      '<button class="btn" id="send">Send update</button>'+
-      '<button class="btn ghost" id="back">Back to passes</button><div class="msg" id="m"></div></div>').firstChild;
-    view.appendChild(form);
-    form.querySelector('#back').onclick = showPasses;
-    // Deliverables — the artifact repo behind the pass's gallery link
-    const dpanel = el('<div class="panel"><label>Deliverables (demos & finished work)</label><div id="items"></div>'+
-      '<label>Add a demo or link</label><div class="row"><input id="dt" placeholder="Title"><input id="du" placeholder="https://…"></div>'+
-      '<button class="btn ghost" id="addlink">Add link</button>'+
-      '<label>Add a picture of finished work</label><input type="file" id="dimg" accept="image/png,image/jpeg,image/webp">'+
-      '<div class="msg" id="dmsg"></div><div id="gal"></div></div>').firstChild;
-    view.appendChild(dpanel);
-    const dmsg = dpanel.querySelector('#dmsg');
-    async function loadDeliverables(){
-      const {items, galleryUrl} = await api('/api/passes/'+id+'/deliverables');
-      const list = dpanel.querySelector('#items');
-      list.innerHTML = items.length ? '' : '<div style="color:var(--mute);font-size:.85rem">Nothing here yet — the pass links here automatically at Delivered.</div>';
-      for (const d of items){
-        const row = el('<div class="maprow"><span style="flex:1;color:var(--text)">'+esc(d.title)+
-          ' <span style="color:var(--mute)">('+d.kind+')</span></span>'+
-          '<button class="btn ghost" style="margin:0;width:auto;padding:6px 12px">Remove</button></div>').firstChild;
-        row.querySelector('button').onclick = async ()=>{ 
-          await api('/api/passes/'+id+'/deliverables',{method:'DELETE',body:JSON.stringify({id:d.id})});
-          loadDeliverables();
-        };
-        list.appendChild(row);
-      }
-      const gal = dpanel.querySelector('#gal');
-      gal.innerHTML = '<label>Client gallery link</label><code>'+esc(galleryUrl)+'</code>';
-      const cb = el('<button class="btn ghost">Copy gallery link</button>').firstChild;
-      cb.onclick = ()=>copy(galleryUrl, cb);
-      gal.appendChild(cb);
-    }
-    dpanel.querySelector('#addlink').onclick = async ()=>{
-      dmsg.className='msg'; dmsg.textContent='Adding…';
-      try {
-        await api('/api/passes/'+id+'/deliverables',{method:'POST',body:JSON.stringify({
-          kind:'link', title: dpanel.querySelector('#dt').value, url: dpanel.querySelector('#du').value})});
-        dmsg.className='msg ok'; dmsg.textContent='Added.';
-        dpanel.querySelector('#dt').value=''; dpanel.querySelector('#du').value='';
-        loadDeliverables();
-      } catch(e){ dmsg.className='msg err'; dmsg.textContent=e.message; }
-    };
-    dpanel.querySelector('#dimg').onchange = async (ev)=>{
-      const f = ev.target.files[0]; if(!f) return;
-      dmsg.className='msg'; dmsg.textContent='Uploading…';
-      try {
-        const r = await fetch('/api/passes/'+id+'/deliverables/upload?title='+encodeURIComponent(f.name.replace(/\.[^.]+$/,'')),
-          {method:'POST',headers:{'content-type':f.type,authorization:'Bearer '+KEY},body:f});
-        if(!r.ok) throw new Error((await r.json()).error||'Upload failed');
-        dmsg.className='msg ok'; dmsg.textContent='Uploaded.';
-        loadDeliverables();
-      } catch(e){ dmsg.className='msg err'; dmsg.textContent=e.message; }
-    };
-    loadDeliverables().catch(()=>{});
-    form.querySelector('#send').onclick = async () => {
-      const m = form.querySelector('#m'); m.className='msg'; m.textContent='Sending…';
+
+    // Send update form
+    const updatePanel = el('<div class="panel">'+
+      '<div class="panel-title">📤 Send an update to their phone</div>'+
+      '<label class="field-label">What happened?</label>'+
+      '<textarea id="note" placeholder="Example: Finished the homepage design, moving to development next week"></textarea>'+
+      '<span class="hint">Keep it brief and client-friendly. The AI will clean it up before sending.</span>'+
+      '<label class="field-label">Change their status to (optional)</label>'+
+      '<input id="phase" placeholder="Example: In Development">'+
+      '<span class="hint">Leave blank to keep current status: '+esc(pass.currentPhase)+'</span>'+
+      '<button class="btn" id="sendBtn">Send Update 📱</button>'+
+      '<div class="msg" id="sendMsg"></div></div>').firstChild;
+    view.appendChild(updatePanel);
+    updatePanel.querySelector('#sendBtn').onclick = async () => {
+      const m = updatePanel.querySelector('#sendMsg');
+      const note = updatePanel.querySelector('#note').value.trim();
+      if (!note){ msg(m,'err','Please describe what happened.'); return; }
+      msg(m,'','Sending...');
       try {
         const {outcome} = await api('/api/passes/'+id+'/update', {method:'POST', body: JSON.stringify({
-          note: form.querySelector('#note').value, phase: form.querySelector('#phase').value || undefined })});
-        if (outcome.action==='shipped'){ m.className='msg ok';
-          m.textContent = 'Sent: \u201C'+outcome.text+'\u201D' + (outcome.usedFallback ? ' (auto-language was suppressed; a plain status line went out)' : ''); }
-        else { m.className='msg err'; m.textContent = 'Not sent — '+outcome.reason.replace(/-/g,' ')+'.'; }
-      } catch(e){ m.className='msg err'; m.textContent = e.message; }
+          note, phase: updatePanel.querySelector('#phase').value.trim() || undefined })});
+        if (outcome.action==='shipped'){
+          msg(m,'ok','✅ Sent to phone: "'+outcome.text+'"');
+          updatePanel.querySelector('#note').value='';
+          updatePanel.querySelector('#phase').value='';
+          showDetail(id);
+        } else {
+          msg(m,'err','Not sent — '+outcome.reason.replace(/-/g,' ')+'. Try again in a few minutes.');
+        }
+      } catch(e){ msg(m,'err',e.message); }
     };
-  } catch(e){ view.innerHTML = '<div class="empty">'+esc(e.message)+'</div>'; }
-}
 
-// ── Mapping tab ──
-async function showMapping(){
-  view.innerHTML = '<div class="empty">Loading…</div>';
-  try {
-    const {columnToPhase} = await api('/api/mapping');
-    const panel = el('<div class="panel"><label>Board column → phase your stakeholder sees</label><div id="rows"></div>'+
-      '<button class="btn ghost" id="add">Add a mapping</button>'+
-      '<button class="btn" id="save">Save mapping</button><div class="msg" id="m"></div></div>').firstChild;
-    const rows = panel.querySelector('#rows');
-    const addRow = (col='', phase='') => rows.appendChild(el('<div class="maprow">'+
-      '<input value="'+esc(col)+'" placeholder="Trello column" aria-label="Board column">'+
-      '<span>→</span><input value="'+esc(phase)+'" placeholder="Client-facing phase" aria-label="Phase"></div>').firstChild);
-    Object.entries(columnToPhase).forEach(([c,p])=>addRow(c,p));
-    panel.querySelector('#add').onclick = () => addRow();
-    panel.querySelector('#save').onclick = async () => {
-      const m = panel.querySelector('#m'); m.className='msg'; m.textContent='Saving…';
-      const map = {};
-      rows.querySelectorAll('.maprow').forEach(r=>{ const [a,b]=r.querySelectorAll('input');
-        if(a.value.trim()&&b.value.trim()) map[a.value.trim()]=b.value.trim(); });
-      try { await api('/api/mapping',{method:'PUT',body:JSON.stringify({columnToPhase:map})});
-        m.className='msg ok'; m.textContent='Mapping saved.'; }
-      catch(e){ m.className='msg err'; m.textContent=e.message; }
+    // Branding / setup link
+    if (pass.brandingToken || !pass.addUrl){
+      const brandPanel = el('<div class="panel">'+
+        '<div class="panel-title">🔗 Client setup link</div>'+
+        '<p style="color:var(--mute);font-size:.88rem;margin:0 0 10px">Send this link to your client. They upload a logo, pick a color, and get the wallet pass — all in one page.</p>'+
+        '<div id="brandLinkArea"></div></div>').firstChild;
+      view.appendChild(brandPanel);
+      try {
+        const {brandingUrl} = await api('/api/passes/'+id+'/branding-link');
+        const area = brandPanel.querySelector('#brandLinkArea');
+        area.innerHTML = '<div class="link-box">'+esc(brandingUrl)+'</div>';
+        const cb = el('<button class="btn secondary">Copy Setup Link</button>').firstChild;
+        cb.onclick = ()=>copy(brandingUrl, cb);
+        area.appendChild(cb);
+      } catch(_){}
+    }
+
+    // Deliverables
+    const dPanel = el('<div class="panel">'+
+      '<div class="panel-title">📁 Deliverables & demos</div>'+
+      '<p style="color:var(--mute);font-size:.88rem;margin:0 0 14px">Add links to demos, Looms, or pictures of finished work. These go into a gallery your client can tap from their wallet pass.</p>'+
+      '<div id="delivList"></div>'+
+      '<label class="field-label">Add a link (Loom, Figma, live site…)</label>'+
+      '<input id="dlTitle" placeholder="What is it? e.g. Sprint 4 demo recording">'+
+      '<input id="dlUrl" placeholder="https://" style="margin-top:8px">'+
+      '<button class="btn secondary" id="addLink" style="margin-top:10px">Add Link</button>'+
+      '<label class="field-label" style="margin-top:16px">Add a photo or screenshot</label>'+
+      '<input type="file" id="dlImg" accept="image/*" style="padding:8px">'+
+      '<div class="msg" id="dMsg"></div>'+
+      '<div id="galLink"></div></div>').firstChild;
+    view.appendChild(dPanel);
+    async function loadDeliverables(){
+      try {
+        const {items, galleryUrl} = await api('/api/passes/'+id+'/deliverables');
+        const list = dPanel.querySelector('#delivList');
+        list.innerHTML = '';
+        if (!items.length){
+          list.innerHTML = '<div style="color:var(--mute);font-size:.85rem;margin-bottom:10px">Nothing added yet.</div>';
+        }
+        for (const d of items){
+          const row = el('<div class="deliv-item">'+
+            '<span style="font-size:.88rem">'+esc(d.title)+' <span style="color:var(--mute)">('+d.kind+')</span></span>'+
+            '<button class="del-x" title="Remove">×</button></div>').firstChild;
+          row.querySelector('button').onclick = async ()=>{
+            await api('/api/passes/'+id+'/deliverables',{method:'DELETE',body:JSON.stringify({id:d.id})});
+            loadDeliverables();
+          };
+          list.appendChild(row);
+        }
+        const galDiv = dPanel.querySelector('#galLink');
+        galDiv.innerHTML = '<label class="field-label">Client gallery link</label><div class="link-box">'+esc(galleryUrl)+'</div>';
+        const gb = el('<button class="btn secondary">Copy Gallery Link</button>').firstChild;
+        gb.onclick=()=>copy(galleryUrl,gb);
+        galDiv.appendChild(gb);
+      } catch(_){}
+    }
+    const dm = dPanel.querySelector('#dMsg');
+    dPanel.querySelector('#addLink').onclick = async ()=>{
+      const t=dPanel.querySelector('#dlTitle').value.trim(), u=dPanel.querySelector('#dlUrl').value.trim();
+      if(!t||!u){ msg(dm,'err','Fill in both the title and the link.'); return; }
+      msg(dm,'','Adding...');
+      try { await api('/api/passes/'+id+'/deliverables',{method:'POST',body:JSON.stringify({kind:'link',title:t,url:u})});
+        dPanel.querySelector('#dlTitle').value=''; dPanel.querySelector('#dlUrl').value='';
+        msg(dm,'ok','Added!'); loadDeliverables(); }
+      catch(e){ msg(dm,'err',e.message); }
     };
-    view.innerHTML=''; view.appendChild(panel);
-  } catch(e){ view.innerHTML = '<div class="empty">'+esc(e.message)+'</div>'; }
+    dPanel.querySelector('#dlImg').onchange = async (ev)=>{
+      const f=ev.target.files[0]; if(!f) return;
+      msg(dm,'','Uploading...');
+      try {
+        const r=await fetch('/api/passes/'+id+'/deliverables/upload?title='+encodeURIComponent(f.name.replace(/\\.[^.]+$/,'')),
+          {method:'POST',headers:{'content-type':f.type,authorization:'Bearer '+KEY},body:f});
+        if(!r.ok) throw new Error((await r.json()).error||'Upload failed');
+        msg(dm,'ok','Uploaded!'); loadDeliverables();
+      } catch(e){ msg(dm,'err',e.message); }
+    };
+    loadDeliverables();
+  } catch(e){ view.innerHTML = '<div class="empty"><span class="emoji">⚠️</span><h3>Could not load</h3><p>'+esc(e.message)+'</p></div>'; }
 }
 
-// ── Issue tab ──
-function showIssue(){
-  const panel = el('<div class="panel">'+
-    '<label>Who is this pass for?</label><input id="who" placeholder="Acme Corp — CEO">'+
-    '<label>Type</label><select id="prof"><option value="client-delivery">Client delivery</option>'+
-    '<option value="internal-program">Internal program</option></select>'+
-    '<details style="margin-top:14px"><summary style="color:var(--mute);font-size:.85rem;cursor:pointer">'+
-    'Connect a Trello or Jira board (optional — the Board tab works without one)</summary>'+
-    '<div class="row"><div><label>Board / project ID</label><input id="board" placeholder="Trello board id or Jira project key"></div>'+
-    '<div><label>Card / issue (optional)</label><input id="card" placeholder="* = whole board"></div></div></details>'+
-    '<button class="btn" id="create">Create pass</button><div class="msg" id="m"></div><div id="out"></div></div>').firstChild;
-  panel.querySelector('#create').onclick = async () => {
-    const m = panel.querySelector('#m'); m.className='msg'; m.textContent='Creating…';
-    try {
-      const r = await api('/api/passes',{method:'POST',body:JSON.stringify({
-        recipientLabel: panel.querySelector('#who').value, profile: panel.querySelector('#prof').value,
-        boardId: panel.querySelector('#board').value || 'internal',
-        cardId: panel.querySelector('#card').value || undefined })});
-      m.className='msg ok'; m.textContent='Pass created. Send your client this one link — they add their logo, and their wallet pass is ready on the same page.';
-      const out = panel.querySelector('#out');
-      out.innerHTML = '<label>Client setup link (expires in 72h)</label><code>'+esc(r.brandingUrl)+'</code>';
-      const b = el('<button class="btn ghost">Copy link</button>').firstChild;
-      b.onclick = () => copy(r.brandingUrl, b);
-      out.appendChild(b);
-    } catch(e){ m.className='msg err'; m.textContent=e.message; }
-  };
-  view.innerHTML=''; view.appendChild(panel);
-}
-
-// ── First-run onboarding: three steps, one action each ──
-function showOnboarding(step=1, demoLink=null){
-  const dots = '<div class="dots">'+[1,2,3].map(i=>'<i class="'+(i<=step?'on':'')+'"></i>').join('')+'</div>';
-  const skip = '<button class="skip" id="skip">Skip — I\\'ll explore on my own</button>';
-  let html = '';
-  if (step===1){
-    html = '<div class="ob"><div class="step">HOW STATUSPASS WORKS</div>'+
-      '<h2>Your client\\'s project status,<br>living in their wallet.</h2>'+
-      '<p>No app. No login. You update once — their lock screen shows a clean, client-safe sentence.</p>'+
-      '<p>Let\\'s prove it on your own phone. It takes about a minute.</p>'+
-      dots+'<button class="btn" id="next">Show me</button>'+skip+'</div>';
-  } else if (step===2){
-    html = '<div class="ob"><div class="step">STEP 1 OF 2</div>'+
-      '<h2>Put a pass on your phone</h2>'+
-      (demoLink
-        ? '<p>Open this link on your phone. Add any logo, pick a color, save — then tap <b style="color:var(--text)">Add to your wallet</b>.</p>'+
-          '<code>'+esc(demoLink)+'</code><button class="btn ghost" id="copy">Copy link</button>'+
-          dots+'<button class="btn" id="next">Done — it\\'s in my wallet</button>'
-        : '<p>We\\'ll create a demo pass addressed to you.</p>'+
-          dots+'<button class="btn" id="make">Create my demo pass</button>')+
-      '<div class="msg" id="m"></div>'+skip+'</div>';
-  } else {
-    html = '<div class="ob"><div class="step">STEP 2 OF 2</div>'+
-      '<h2>Now make your phone buzz</h2>'+
-      '<p>Go to the <b style="color:var(--text)">Board</b> tab and drag your demo pass to the next phase. Add a short note if you like.</p>'+
-      '<p>Within seconds, your lock screen shows the update. That\\'s the whole product.</p>'+
-      dots+'<button class="btn" id="board">Open the Board</button>'+skip+'</div>';
-  }
-  view.innerHTML = html;
-  const done = () => { localStorage.setItem('sp_onboarded','1'); };
-  const sk = view.querySelector('#skip'); if (sk) sk.onclick = () => { done(); showPasses(); };
-  const nx = view.querySelector('#next');
-  if (nx) nx.onclick = () => showOnboarding(step+1, demoLink);
-  const cp = view.querySelector('#copy'); if (cp) cp.onclick = () => copy(demoLink, cp);
-  const mk = view.querySelector('#make');
-  if (mk) mk.onclick = async () => {
-    const m = view.querySelector('#m'); m.className='msg'; m.textContent='Creating…';
-    try {
-      const r = await api('/api/passes',{method:'POST',body:JSON.stringify({
-        recipientLabel:'You — demo', profile:'client-delivery', boardId:'internal'})});
-      showOnboarding(2, r.brandingUrl);
-    } catch(e){ m.className='msg err'; m.textContent=e.message; }
-  };
-  const bd = view.querySelector('#board');
-  if (bd) bd.onclick = () => {
-    done();
-    document.querySelectorAll('nav button').forEach(x=>x.removeAttribute('aria-current'));
-    document.querySelector('nav button[data-tab="board"]').setAttribute('aria-current','true');
-    showBoard();
-  };
-}
-
-// ── Board tab: the internal status board ──
+// ── Board tab ──
+let _selectedTk = null;
 async function showBoard(){
-  view.innerHTML = '<div class="empty">Loading…</div>';
+  setTab('board');
+  view.innerHTML = '<div class="empty"><span class="emoji">⏳</span><h3>Loading...</h3></div>';
   try {
     const {profiles} = await api('/api/board');
     const names = Object.keys(profiles);
-    if (!names.length){ view.innerHTML =
-      '<div class="empty">No passes yet. Issue a pass, then move it through its phases here.</div>'; return; }
+    if (!names.length){
+      view.innerHTML = '';
+      view.appendChild(el('<div class="empty"><span class="emoji">📋</span><h3>No clients on the board yet</h3><p>Add a client first, then drag or tap their card to move it through stages.</p></div>').firstChild);
+      return;
+    }
     view.innerHTML = '';
+    view.appendChild(el('<div class="board-hint">📱 On mobile: tap a card to select it, then tap the column to move it. On desktop: drag and drop.</div>').firstChild);
+    _selectedTk = null;
     for (const prof of names){
-      const group = el('<div class="boardgroup"><label>'+
-        (prof==='client-delivery'?'Client delivery':'Internal programs')+'</label><div class="board"></div></div>').firstChild;
-      const board = group.querySelector('.board');
+      const group = document.createElement('div');
+      const typeLabel = prof==='client-delivery' ? 'Client projects' : 'Internal projects';
+      group.innerHTML = '<div class="field-label" style="margin-bottom:10px">'+typeLabel+'</div>';
+      const wrap = document.createElement('div'); wrap.className='board-wrap';
+      const board = document.createElement('div'); board.className='board';
       for (const phase of profiles[prof].phases){
-        const col = el('<div class="col" data-phase="'+esc(phase)+'"><h3>'+esc(phase)+'</h3></div>').firstChild;
+        const col = el('<div class="col" data-phase="'+esc(phase)+'"><div class="col-head">'+esc(phase)+'</div></div>').firstChild;
         for (const p of (profiles[prof].passes[phase]||[])){
-          const tk = el('<div class="tk" draggable="true" data-id="'+esc(p.id)+'" '+
-            'style="--band:'+(prof==='client-delivery'?'#2E3A5C':'#3C3450')+'">'+esc(p.recipientLabel)+'</div>').firstChild;
-          tk.ondragstart = (e)=>e.dataTransfer.setData('text/plain', p.id);
+          const tk = el('<div class="tk" draggable="true" data-id="'+esc(p.id)+'" style="--band:'+(prof==='client-delivery'?'#2E3A5C':'#3C3450')+'">'+esc(p.recipientLabel)+'</div>').firstChild;
+          tk.ondragstart = (e)=>{ e.dataTransfer.setData('text/plain', p.id); tk.style.opacity='.5'; };
+          tk.ondragend = ()=>{ tk.style.opacity='1'; };
+          // Tap-to-select (mobile)
+          tk.onclick = (e)=>{
+            e.stopPropagation();
+            if(_selectedTk){ _selectedTk.classList.remove('selected'); }
+            if(_selectedTk===tk){ _selectedTk=null; return; }
+            _selectedTk=tk; tk.classList.add('selected');
+          };
           col.appendChild(tk);
         }
-        col.ondragover = (e)=>{e.preventDefault(); col.classList.add('dragover')};
-        col.ondragleave = ()=>col.classList.remove('dragover');
-        col.ondrop = async (e)=>{
-          e.preventDefault(); col.classList.remove('dragover');
-          const id = e.dataTransfer.getData('text/plain'); if(!id) return;
-          const note = window.prompt('Add a note for this update (optional)') || undefined;
-          try {
-            const {outcome} = await api('/api/passes/'+id+'/move',{method:'POST',
-              body: JSON.stringify({phase: col.dataset.phase, note})});
-            if (outcome.action !== 'shipped' && outcome.reason !== 'cooldown')
-              alert('Not sent — '+outcome.reason.replace(/-/g,' '));
-          } catch(err){ alert(err.message); }
-          showBoard();
+        // Drop (desktop)
+        col.ondragover=(e)=>{e.preventDefault();col.classList.add('dragover')};
+        col.ondragleave=()=>col.classList.remove('dragover');
+        col.ondrop=async(e)=>{
+          e.preventDefault();col.classList.remove('dragover');
+          const id=e.dataTransfer.getData('text/plain'); if(!id)return;
+          await doMove(id, col.dataset.phase);
+        };
+        // Tap-to-move (mobile)
+        col.onclick=async()=>{
+          if(!_selectedTk)return;
+          const id=_selectedTk.dataset.id;
+          const phase=col.dataset.phase;
+          _selectedTk.classList.remove('selected'); _selectedTk=null;
+          await doMove(id, phase);
         };
         board.appendChild(col);
       }
+      wrap.appendChild(board);
+      group.appendChild(wrap);
       view.appendChild(group);
     }
-  } catch(e){ view.innerHTML = '<div class="empty">'+esc(e.message)+'</div>'; }
+  } catch(e){ view.innerHTML = '<div class="empty"><span class="emoji">⚠️</span><h3>Could not load board</h3><p>'+esc(e.message)+'</p></div>'; }
 }
 
-const tabs = { passes: showPasses, board: showBoard, mapping: showMapping, issue: showIssue };
+async function doMove(id, phase){
+  const note = window.prompt('Add a short note for the client update (optional)\\n\\nExample: Wrapped up the designs, heading into development') || undefined;
+  try {
+    const {outcome} = await api('/api/passes/'+id+'/move',{method:'POST',body:JSON.stringify({phase,note})});
+    if (outcome.action==='shipped'){
+      alert('✅ Update sent! The client will see "'+outcome.text+'" on their lock screen.');
+    } else if (outcome.reason==='cooldown'){
+      alert('⏳ Moved — but the client was updated very recently, so no new notification was sent to avoid spam.');
+    } else {
+      alert('Moved, but update not sent — '+outcome.reason.replace(/-/g,' ')+'.');
+    }
+  } catch(e){ alert('Error: '+e.message); }
+  showBoard();
+}
+
+// ── Add Client (Issue) ──
+function showIssue(){
+  setTab('clients');
+  view.innerHTML = '';
+  const back = el('<button class="back-link">← Back to clients</button>').firstChild;
+  back.onclick = showClients;
+  view.appendChild(back);
+  const panel = el('<div class="panel">'+
+    '<div class="panel-title">👤 Add a new client</div>'+
+    '<label class="field-label">Client name</label>'+
+    '<input id="who" placeholder="e.g. Acme Corp — Sarah (CEO)" autofocus>'+
+    '<span class="hint">Who is receiving project updates? Be specific so you can identify them later.</span>'+
+    '<label class="field-label">Project type</label>'+
+    '<select id="prof">'+
+      '<option value="client-delivery">Client delivery — for a paying client</option>'+
+      '<option value="internal-program">Internal project — for your own team</option>'+
+    '</select>'+
+    '<details style="margin-top:20px;border:1px solid var(--line);border-radius:10px;padding:12px">'+
+      '<summary style="color:var(--mute);font-size:.85rem;cursor:pointer;font-weight:600">🔌 Connect Trello or Jira (optional)</summary>'+
+      '<div style="margin-top:12px">'+
+        '<span class="hint">Skip this if you plan to move cards manually from the Board tab. You can always add this later.</span>'+
+        '<label class="field-label">Board or Project ID</label>'+
+        '<input id="boardId" placeholder="Trello board ID or Jira project key">'+
+        '<label class="field-label">Card or Issue (optional)</label>'+
+        '<input id="cardId" placeholder="Leave blank to track the whole board">'+
+      '</div>'+
+    '</details>'+
+    '<button class="btn" id="createBtn">Create Pass & Get Client Link →</button>'+
+    '<div class="msg" id="cm"></div><div id="out"></div></div>').firstChild;
+  view.appendChild(panel);
+  panel.querySelector('#createBtn').onclick = async ()=>{
+    const name=panel.querySelector('#who').value.trim();
+    const cm=panel.querySelector('#cm');
+    if(!name){ msg(cm,'err','Please enter the client name.'); return; }
+    msg(cm,'','Creating pass...');
+    try {
+      const r=await api('/api/passes',{method:'POST',body:JSON.stringify({
+        recipientLabel:name, profile:panel.querySelector('#prof').value,
+        boardId:panel.querySelector('#boardId').value.trim()||'internal',
+        cardId:panel.querySelector('#cardId').value.trim()||undefined})});
+      cm.className='msg'; cm.style.display='none';
+      const out=panel.querySelector('#out');
+      out.innerHTML='';
+      out.appendChild(el('<div class="success-banner">'+
+        '<strong>🎉 Pass created for '+esc(name)+'!</strong>'+
+        'Send them the link below. They open it, add a logo and brand color, and tap "Add to Wallet" — done. You can then update their lock screen from this console anytime.</div>').firstChild);
+      out.appendChild(el('<div style="margin-top:4px"><div class="field-label">Send this link to your client (valid for 72 hours)</div>'+
+        '<div class="link-box">'+esc(r.brandingUrl)+'</div></div>').firstChild);
+      const copyBtn=el('<button class="btn">Copy Client Link</button>').firstChild;
+      copyBtn.onclick=()=>copy(r.brandingUrl,copyBtn);
+      out.appendChild(copyBtn);
+      const viewBtn=el('<button class="btn secondary" style="margin-top:8px">View in Clients List</button>').firstChild;
+      viewBtn.onclick=showClients;
+      out.appendChild(viewBtn);
+      panel.querySelector('#createBtn').style.display='none';
+    } catch(e){ msg(cm,'err',e.message); }
+  };
+}
+
+// ── Settings tab ──
+async function showSettings(){
+  setTab('settings');
+  view.innerHTML = '<div class="empty"><span class="emoji">⏳</span><h3>Loading...</h3></div>';
+  try {
+    const {columnToPhase} = await api('/api/mapping');
+    view.innerHTML = '';
+    const panel = el('<div class="panel">'+
+      '<div class="panel-title">🔌 Trello / Jira column mapping</div>'+
+      '<p style="color:var(--mute);font-size:.88rem;margin:0 0 14px">When a card moves to one of these columns in Trello or Jira, the client sees the matching status on their wallet pass.</p>'+
+      '<div id="rows"></div>'+
+      '<button class="btn secondary" id="addRow" style="margin-top:10px">+ Add a mapping</button>'+
+      '<button class="btn" id="saveMap" style="margin-top:8px">Save Changes</button>'+
+      '<div class="msg" id="mapMsg"></div></div>').firstChild;
+    const rows=panel.querySelector('#rows');
+    const addRow=(col='',phase='')=>{
+      const r=el('<div class="maprow">'+
+        '<input value="'+esc(col)+'" placeholder="Trello/Jira column" style="flex:1" aria-label="Board column">'+
+        '<span>→</span>'+
+        '<input value="'+esc(phase)+'" placeholder="Client status" style="flex:1" aria-label="Status shown to client">'+
+        '<button class="del-row" title="Remove">×</button></div>').firstChild;
+      r.querySelector('.del-row').onclick=()=>r.remove();
+      rows.appendChild(r);
+    };
+    Object.entries(columnToPhase).forEach(([c,p])=>addRow(c,p));
+    if(!Object.keys(columnToPhase).length) addRow();
+    panel.querySelector('#addRow').onclick=()=>addRow();
+    panel.querySelector('#saveMap').onclick=async()=>{
+      const m=panel.querySelector('#mapMsg'); msg(m,'','Saving...');
+      const map={};
+      rows.querySelectorAll('.maprow').forEach(r=>{const [a,b]=r.querySelectorAll('input');
+        if(a.value.trim()&&b.value.trim()) map[a.value.trim()]=b.value.trim();});
+      try{ await api('/api/mapping',{method:'PUT',body:JSON.stringify({columnToPhase:map})});
+        msg(m,'ok','Saved!'); }
+      catch(e){ msg(m,'err',e.message); }
+    };
+    view.innerHTML=''; view.appendChild(panel);
+
+    // Webhook info
+    view.appendChild(el('<div class="panel">'+
+      '<div class="panel-title">📡 Webhook URLs</div>'+
+      '<p style="color:var(--mute);font-size:.88rem;margin:0 0 12px">Point your Trello or Jira webhook at these URLs to auto-trigger client updates when cards move.</p>'+
+      '<label class="field-label">Trello webhook URL</label>'+
+      '<div class="link-box">'+esc(location.origin+'/webhooks/trello')+'</div>'+
+      '<label class="field-label" style="margin-top:14px">Jira webhook URL</label>'+
+      '<div class="link-box">'+esc(location.origin+'/webhooks/jira/[your-jira-secret]')+'</div>'+
+      '</div>').firstChild);
+  } catch(e){ view.innerHTML = '<div class="empty"><span class="emoji">⚠️</span><h3>Could not load settings</h3><p>'+esc(e.message)+'</p></div>'; }
+}
+
+const tabs = { clients: showClients, board: showBoard, settings: showSettings };
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
-  document.querySelectorAll('nav button').forEach(x=>x.removeAttribute('aria-current'));
-  b.setAttribute('aria-current','true'); tabs[b.dataset.tab]();
+  tabs[b.dataset.tab]();
 });
-showPasses();
+showClients();
 </script>
 </main></body></html>`;
 }
