@@ -422,6 +422,51 @@ export function startServer(overrides: Partial<{
     const demoShareUrl = process.env.DEMO_PASS_SHARE_URL ?? "";
     const wwKey = process.env.WALLETWALLET_API_KEY ?? "";
 
+    if (req.method === "GET" && url.pathname === "/g/demo") {
+      const deliverables = [
+        { title: "Sprint 6 demo", host: "loom.com", url: "https://www.loom.com/share/demo-sprint-6", when: "Jul 8" },
+        { title: "Staging preview", host: "vercel.app", url: "https://homepage-redesign-demo.vercel.app", when: "Jul 5" },
+        { title: "Homepage v3 mockups", host: "figma.com", url: "https://www.figma.com/design/demo-homepage-v3", when: "Jul 3" },
+        { title: "Discovery brief", host: "notion.so", url: "https://www.notion.so/demo-discovery-brief", when: "Jun 27" },
+        { title: "Kickoff recording", host: "loom.com", url: "https://www.loom.com/share/demo-kickoff", when: "Jun 21" },
+      ];
+      const rows = deliverables.map(d =>
+        `<a class="card link" href="${d.url}" rel="noopener" target="_blank">` +
+        `<span class="t">${d.title}<span class="when">${d.when}</span></span>` +
+        `<span class="u">${d.host} →</span></a>`
+      ).join("\n");
+      const html = `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>StatusPass demo — Deliverables</title>
+<style>
+  body{font-family:-apple-system,system-ui,sans-serif;background:#0B0E16;color:#F2F4F9;margin:0;padding:24px;display:flex;justify-content:center;min-height:100vh}
+  main{max-width:520px;width:100%}
+  .band{height:6px;border-radius:6px;background:#1B212E;margin-bottom:18px}
+  .kicker{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.7rem;letter-spacing:.14em;color:#C9A96A;text-transform:uppercase;margin-bottom:8px}
+  h1{font-size:1.35rem;margin:0 0 4px;font-weight:700}
+  p.sub{color:#8A93AB;margin:0 0 22px;font-size:.9rem;line-height:1.5}
+  .grid{display:grid;grid-template-columns:1fr;gap:12px}
+  .card.link{display:flex;justify-content:space-between;align-items:center;padding:16px;text-decoration:none;color:#F2F4F9;
+             background:#151A28;border:1px solid #262D40;border-radius:14px;transition:border-color .15s,transform .15s}
+  .card.link:hover{border-color:#C9A96A;transform:translateY(-1px)}
+  .card .t{font-size:.98rem;font-weight:600}
+  .card .u{color:#8A93AB;font-size:.85rem;white-space:nowrap;margin-left:12px;font-family:ui-monospace,monospace}
+  .when{display:block;color:#5d6478;font-size:.72rem;margin-top:3px;font-family:ui-monospace,monospace}
+  footer{margin-top:32px;font-size:.72rem;color:#5d6478;text-align:center;letter-spacing:.06em;font-family:ui-monospace,monospace}
+  footer a{color:#8A93AB;text-decoration:none}
+</style></head>
+<body><main>
+  <div class="band"></div>
+  <div class="kicker">Demo project · Deliverables</div>
+  <h1>Homepage Redesign</h1>
+  <p class="sub">Every demo, preview, and finished deliverable — newest first. This is what your client taps into from the QR code on their wallet pass.</p>
+  <div class="grid">${rows}</div>
+  <footer>StatusPass demo · <a href="/">visit landing</a></footer>
+</main></body></html>`;
+      end(200, { "content-type": "text/html; charset=utf-8", "cache-control": "public,max-age=60" }, html);
+      return;
+    }
+
     if (req.method === "GET" && url.pathname === "/logo.png") {
       const buf = Buffer.from(LOGO_PNG_B64, "base64");
       end(200, { "content-type": "image/png", "cache-control": "public,max-age=604800" }, buf);
@@ -437,12 +482,12 @@ export function startServer(overrides: Partial<{
 
     if (req.method === "POST" && url.pathname === "/api/demo/move") {
       if (!demoSerial || !wwKey) { end(503, { "content-type": "application/json" }, JSON.stringify({ error: "demo not configured" })); return; }
-      const DEMO_PHASES: Record<string, { phase: string; pct: string; status: string; msg: string }> = {
-        "0": { phase: "DISCOVERY",  pct: "0% COMPLETE",   status: "ON TRACK",     msg: "Discovery is underway — goals and scope are being mapped." },
-        "1": { phase: "DESIGN",     pct: "25% COMPLETE",  status: "ON TRACK",     msg: "Design has begun — first concepts land on the shelf this week." },
-        "2": { phase: "BUILD",      pct: "50% COMPLETE",  status: "ON TRACK",     msg: "The build is in motion — the staging site is live behind your QR." },
-        "3": { phase: "IN REVIEW",  pct: "75% COMPLETE",  status: "IN PROGRESS",  msg: "The homepage has moved to review and is awaiting final copy." },
-        "4": { phase: "DELIVERED",  pct: "100% COMPLETE", status: "COMPLETE",     msg: "Delivered — every demo and deliverable is on your shelf." },
+      const DEMO_PHASES: Record<string, { phase: string; pct: string; status: string; msg: string; deliverable: string; nextMilestone: string }> = {
+        "0": { phase: "DISCOVERY",  pct: "0% COMPLETE",   status: "ON TRACK",     msg: "Discovery is underway — goals and scope are being mapped.",             deliverable: "KICKOFF NOTES",         nextMilestone: "Discovery review" },
+        "1": { phase: "DESIGN",     pct: "25% COMPLETE",  status: "ON TRACK",     msg: "Design has begun — first concepts land on the shelf this week.",       deliverable: "MOODBOARD APPROVED",    nextMilestone: "v1 concepts" },
+        "2": { phase: "BUILD",      pct: "50% COMPLETE",  status: "ON TRACK",     msg: "The build is in motion — the staging site is live behind your QR.",    deliverable: "STAGING SITE LIVE",     nextMilestone: "First internal QA" },
+        "3": { phase: "IN REVIEW",  pct: "75% COMPLETE",  status: "IN PROGRESS",  msg: "The homepage has moved to review and is awaiting final copy.",         deliverable: "HOMEPAGE v3 SHIPPED",   nextMilestone: "Final copy sign-off" },
+        "4": { phase: "DELIVERED",  pct: "100% COMPLETE", status: "COMPLETE",     msg: "Delivered — every demo and deliverable is on your shelf.",             deliverable: "FINAL ASSETS HANDED OFF", nextMilestone: "30-day retro" },
       };
       try {
         const body = await readBody(req, BODY_LIMITS.json);
@@ -450,18 +495,23 @@ export function startServer(overrides: Partial<{
         const idx = String(parsed.idx ?? "0");
         const d = DEMO_PHASES[idx] ?? DEMO_PHASES["0"];
         const logoUrl = `${config.publicBaseUrl}/logo.png`;
+        const galleryUrl = `${config.publicBaseUrl}/g/demo`;
         const wwBody = {
-          barcodeValue: "statuspass-demo-2026", barcodeFormat: "QR",
+          // QR on the installed pass points to the demo gallery / mini-repo
+          barcodeValue: galleryUrl, barcodeFormat: "QR",
           logoText: "StatusPass", description: "Homepage Redesign · Demo",
           organizationName: "StatusPass",
           headerFields: [{ label: "CLIENT", value: "DEMO PROJECT" }],
-          primaryFields: [{ label: "CURRENT PHASE", value: d.phase, changeMessage: d.msg }],
+          primaryFields: [{ label: "CURRENT FOCUS", value: d.phase, changeMessage: d.msg }],
           secondaryFields: [
             { label: "STATUS", value: d.status },
             { label: "PROGRESS", value: d.pct },
+            { label: "LAST DELIVERABLE", value: d.deliverable, changeMessage: `New deliverable: ${d.deliverable}` },
+            { label: "NEXT MILESTONE", value: d.nextMilestone },
           ],
           backFields: [
-            { label: "LAST UPDATE", value: d.msg },
+            { label: "LATEST UPDATE", value: d.msg },
+            { label: "DEMO SHELF", value: galleryUrl },
             { label: "ABOUT", value: "Live StatusPass demo. Visit statuspass-production.up.railway.app and drag the kanban card to see this pass update in real time." },
           ],
           color: "#1B212E",

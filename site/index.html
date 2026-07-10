@@ -275,7 +275,19 @@ footer .mono{font-size:.68rem;letter-spacing:.14em;color:var(--mute)}
           </div>
           <div>
             <label>LAST DELIVERABLE</label>
-            <div class="val" id="deliv">KICKOFF COMPLETE</div>
+            <div class="val" id="deliv">KICKOFF NOTES</div>
+          </div>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <div>
+            <label>NEXT MILESTONE</label>
+            <div class="val" id="nextMilestone" style="font-size:.85rem">Discovery review</div>
+          </div>
+          <div>
+            <label>DEMO SHELF</label>
+            <a href="/g/demo" target="_blank" rel="noopener" class="val demo-link" style="font-family:ui-monospace,monospace;font-size:.85rem;color:#C9A96A;text-decoration:none">
+              Tap to open →
+            </a>
           </div>
         </div>
         <div class="qr-wrap">
@@ -444,16 +456,11 @@ footer .mono{font-size:.68rem;letter-spacing:.14em;color:var(--mute)}
 <script>
 // ── the hero demo: one state machine drives pass + lock screen ──
 const PHASES = [
-  { name:"DISCOVERY",  pct:0,   status:"ON TRACK", tick:"✓", warn:false, deliv:"KICKOFF COMPLETE",
-    msg:"Discovery is underway — goals and scope are being mapped." },
-  { name:"DESIGN",     pct:25,  status:"ON TRACK", tick:"✓", warn:false, deliv:"MOODBOARD APPROVED",
-    msg:"Design has begun — first concepts land on the shelf this week." },
-  { name:"BUILD",      pct:50,  status:"ON TRACK", tick:"✓", warn:false, deliv:"STAGING SITE LIVE",
-    msg:"The build is in motion — the staging site is live behind your QR." },
-  { name:"IN REVIEW",  pct:75,  status:"IN PROGRESS", tick:"…", warn:true, deliv:"HOMEPAGE v3 SHIPPED",
-    msg:"The homepage has moved to review and is awaiting final copy." },
-  { name:"DELIVERED",  pct:100, status:"ON TRACK", tick:"✓", warn:false, deliv:"FINAL ASSETS HANDED OFF",
-    msg:"Delivered — every demo and deliverable is on your shelf. Tap the QR." },
+  { name:"DISCOVERY",  pct:0,   status:"ON TRACK", tick:"✓", warn:false, deliv:"KICKOFF NOTES",         next:"Discovery review",       msg:"Discovery is underway — goals and scope are being mapped." },
+  { name:"DESIGN",     pct:25,  status:"ON TRACK", tick:"✓", warn:false, deliv:"MOODBOARD APPROVED",    next:"v1 concepts",             msg:"Design has begun — first concepts land on the shelf this week." },
+  { name:"BUILD",      pct:50,  status:"ON TRACK", tick:"✓", warn:false, deliv:"STAGING SITE LIVE",     next:"First internal QA",       msg:"The build is in motion — the staging site is live behind your QR." },
+  { name:"IN REVIEW",  pct:75,  status:"IN PROGRESS", tick:"…", warn:true, deliv:"HOMEPAGE v3 SHIPPED", next:"Final copy sign-off",     msg:"The homepage has moved to review and is awaiting final copy." },
+  { name:"DELIVERED",  pct:100, status:"ON TRACK", tick:"✓", warn:false, deliv:"FINAL ASSETS HANDED OFF", next:"30-day retro",           msg:"Delivered — every demo and deliverable is on your shelf. Tap the QR." },
 ];
 const $ = (id)=>document.getElementById(id);
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -482,6 +489,7 @@ function setPhase(i){
   $("pct").textContent=p.pct+"% COMPLETED";
   $("bar").style.width=p.pct+"%";
   $("deliv").textContent=p.deliv;
+  const nx=$("nextMilestone"); if(nx) nx.textContent=p.next;
   const n=$("notif");
   n.classList.remove("show");
   setTimeout(()=>{ n.classList.add("show"); typeMsg(p.msg); }, reduced?0:260);
