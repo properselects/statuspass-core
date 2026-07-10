@@ -26,6 +26,7 @@ import { consoleEmailSender, createResendSender, priceToTierFromEnv, tierChangeF
          verifyStripeSignature, type EmailSender, type Tier } from "./billing.js";
 import { randomUUID } from "node:crypto";
 import { renderConsolePage } from "./console/ui.js";
+import { LOGO_PNG_B64 } from "./logo.js";
 import { createAnthropicClient, DEFAULT_ROUTING } from "./model/anthropic.js";
 
 // ── Pass delivery adapter (the BUY seam — AddToWallet-style vendor) ──
@@ -421,6 +422,12 @@ export function startServer(overrides: Partial<{
     const demoShareUrl = process.env.DEMO_PASS_SHARE_URL ?? "";
     const wwKey = process.env.WALLETWALLET_API_KEY ?? "";
 
+    if (req.method === "GET" && url.pathname === "/logo.png") {
+      const buf = Buffer.from(LOGO_PNG_B64, "base64");
+      end(200, { "content-type": "image/png", "cache-control": "public,max-age=604800" }, buf);
+      return;
+    }
+
     if (req.method === "GET" && url.pathname === "/api/demo/pass") {
       if (!demoShareUrl) { end(503, { "content-type": "application/json" }, JSON.stringify({ error: "demo not configured" })); return; }
       end(200, { "content-type": "application/json", "cache-control": "public,max-age=86400" },
@@ -442,15 +449,24 @@ export function startServer(overrides: Partial<{
         const parsed = JSON.parse(body.toString());
         const idx = String(parsed.idx ?? "0");
         const d = DEMO_PHASES[idx] ?? DEMO_PHASES["0"];
+        const logoUrl = `${config.publicBaseUrl}/logo.png`;
         const wwBody = {
           barcodeValue: "statuspass-demo-2026", barcodeFormat: "QR",
-          logoText: "StatusPass", description: "Homepage Redesign",
+          logoText: "StatusPass", description: "Homepage Redesign · Demo",
           organizationName: "StatusPass",
           headerFields: [{ label: "CLIENT", value: "DEMO PROJECT" }],
           primaryFields: [{ label: "CURRENT PHASE", value: d.phase, changeMessage: d.msg }],
-          secondaryFields: [{ label: "STATUS", value: d.status }, { label: "PROGRESS", value: d.pct }],
-          backFields: [{ label: "ABOUT", value: "This is a live StatusPass demo. Drag the card at statuspass-production.up.railway.app to update this pass in real time." }],
-          color: "#1B212E", sharingProhibited: false,
+          secondaryFields: [
+            { label: "STATUS", value: d.status },
+            { label: "PROGRESS", value: d.pct },
+          ],
+          backFields: [
+            { label: "LAST UPDATE", value: d.msg },
+            { label: "ABOUT", value: "Live StatusPass demo. Visit statuspass-production.up.railway.app and drag the kanban card to see this pass update in real time." },
+          ],
+          color: "#1B212E",
+          logoURL: logoUrl,
+          sharingProhibited: false,
         };
         const res = await fetch(`https://api.walletwallet.dev/api/passes/${demoSerial}`, {
           method: "PUT",

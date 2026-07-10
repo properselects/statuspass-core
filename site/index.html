@@ -213,6 +213,17 @@ footer .mono{font-size:.68rem;letter-spacing:.14em;color:var(--mute)}
 .qr-wrap a:hover{border-color:rgba(201,169,106,.8)}
 .add-wallet-label{font-size:.62rem;color:rgba(255,255,255,.4);letter-spacing:.08em;text-transform:uppercase;margin-top:6px;font-family:ui-monospace,monospace}
 .qr-wrap a.loading .qr{opacity:.3}
+
+/* ── Live wallet QR codes ── */
+.wallet-qrs{text-align:center;margin-top:18px;padding:16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:14px}
+.wq-label{font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.45);margin-bottom:12px;font-family:ui-monospace,monospace}
+.wq-row{display:flex;justify-content:center;gap:16px}
+.wq-btn{display:flex;flex-direction:column;align-items:center;gap:8px;text-decoration:none;border-radius:12px;padding:10px 14px;border:1px solid rgba(201,169,106,.3);transition:border-color .2s,background .2s;background:rgba(0,0,0,.2)}
+.wq-btn:hover{border-color:rgba(201,169,106,.8);background:rgba(201,169,106,.06)}
+.wq-qr-wrap{border-radius:8px;overflow:hidden;background:#F2F4F9;padding:0;line-height:0}
+.wq-name{font-size:.72rem;color:rgba(255,255,255,.55);line-height:1.5;text-align:center}
+.wq-note{font-size:.65rem;color:rgba(255,255,255,.3);margin-top:10px;letter-spacing:.06em;font-family:ui-monospace,monospace}
+@media(max-width:480px){.wq-qr-wrap img{width:90px;height:90px}}
 </style>
 </head>
 <body>
@@ -304,6 +315,20 @@ footer .mono{font-size:.68rem;letter-spacing:.14em;color:var(--mute)}
       <div class="k-hint">
         <span>Drag the card — or tap a phase:</span>
         <div class="stepper" id="stepper"></div>
+      </div>
+      
+      <!-- Live wallet QR codes -->
+      <div class="wallet-qrs" id="walletQrs">
+        <div class="wq-label">Add to your wallet — scan or tap</div>
+        <div class="wq-row">
+          <a class="wq-btn" id="addWalletLink" href="https://api.walletwallet.dev/p/f337a233-c999-4a14-86e9-e213cb4b1a32" target="_blank" rel="noopener">
+            <div class="wq-qr-wrap">
+              <img id="demoQrImg" src="https://api.qrserver.com/v1/create-qr-code/?size=110x110&margin=6&color=0B0E16&bgcolor=F2F4F9&data=https://api.walletwallet.dev/p/f337a233-c999-4a14-86e9-e213cb4b1a32" alt="QR code to add pass to wallet" width="110" height="110" loading="lazy">
+            </div>
+            <span class="wq-name">🍎 Apple Wallet<br>🤖 Google Wallet</span>
+          </a>
+        </div>
+        <div class="wq-note">Updates live when you drag the card above</div>
       </div>
     </div>
   </div>
