@@ -449,6 +449,56 @@ export function startServer(overrides: Partial<{
       end(200, {}, "ok");
       return;
     }
+
+    // ── Public landing page demo endpoints ──
+    const demoSerial = process.env.DEMO_PASS_SERIAL ?? "";
+    const demoShareUrl = process.env.DEMO_PASS_SHARE_URL ?? "";
+    const wwKey = process.env.WALLETWALLET_API_KEY ?? "";
+
+    if (req.method === "GET" && url.pathname === "/api/demo/pass") {
+      // Returns the demo pass share URL for QR code generation
+      if (!demoShareUrl) { end(503, { "content-type": "application/json" }, JSON.stringify({ error: "demo not configured" })); return; }
+      end(200, { "content-type": "application/json", "cache-control": "public,max-age=86400" },
+        JSON.stringify({ shareUrl: demoShareUrl, serial: demoSerial }));
+      return;
+    }
+
+    if (req.method === "POST" && url.pathname === "/api/demo/move") {
+      // Pushes a real update to the shared demo pass via WalletWallet
+      if (!demoSerial || !wwKey) { end(503, { "content-type": "application/json" }, JSON.stringify({ error: "demo not configured" })); return; }
+      const DEMO_PHASES: Record<string, { phase: string; pct: string; status: string; msg: string }> = {
+        "0": { phase: "DISCOVERY",  pct: "0% COMPLETE",   status: "ON TRACK",     msg: "Discovery is underway — goals and scope are being mapped." },
+        "1": { phase: "DESIGN",     pct: "25% COMPLETE",  status: "ON TRACK",     msg: "Design has begun — first concepts land on the shelf this week." },
+        "2": { phase: "BUILD",      pct: "50% COMPLETE",  status: "ON TRACK",     msg: "The build is in motion — the staging site is live behind your QR." },
+        "3": { phase: "IN REVIEW",  pct: "75% COMPLETE",  status: "IN PROGRESS",  msg: "The homepage has moved to review and is awaiting final copy." },
+        "4": { phase: "DELIVERED",  pct: "100% COMPLETE", status: "COMPLETE",     msg: "Delivered — every demo and deliverable is on your shelf." },
+      };
+      try {
+        const body = await readBody(req, BODY_LIMITS.json);
+        const parsed = JSON.parse(body.toString());
+        const idx = String(parsed.idx ?? "0");
+        const d = DEMO_PHASES[idx] ?? DEMO_PHASES["0"];
+        const wwBody = {
+          barcodeValue: "statuspass-demo-2026", barcodeFormat: "QR",
+          logoText: "StatusPass", description: "Homepage Redesign",
+          organizationName: "StatusPass",
+          headerFields: [{ label: "CLIENT", value: "DEMO PROJECT" }],
+          primaryFields: [{ label: "CURRENT PHASE", value: d.phase, changeMessage: d.msg }],
+          secondaryFields: [{ label: "STATUS", value: d.status }, { label: "PROGRESS", value: d.pct }],
+          backFields: [{ label: "ABOUT", value: "This is a live StatusPass demo. Drag the card at statuspass-production.up.railway.app to update this pass in real time." }],
+          color: "#1B212E", sharingProhibited: false,
+        };
+        const res = await fetch(`https://api.walletwallet.dev/api/passes/${demoSerial}`, {
+          method: "PUT",
+          headers: { "content-type": "application/json", authorization: `Bearer ${wwKey}` },
+          body: JSON.stringify(wwBody),
+        });
+        if (!res.ok) { end(502, { "content-type": "application/json" }, JSON.stringify({ error: `WW error ${res.status}` })); return; }
+        end(200, { "content-type": "application/json" }, JSON.stringify({ ok: true, phase: d.phase, msg: d.msg }));
+      } catch (e: any) { end(500, { "content-type": "application/json" }, JSON.stringify({ error: e.message })); }
+      return;
+    }
+
     if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) {
       end(200, { "content-type": "text/html; charset=utf-8" }, landingHtml);
       return;
