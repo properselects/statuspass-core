@@ -481,14 +481,78 @@ export function startServer(overrides: Partial<{
       return;
     }
 
+    // Send a custom notification to the demo pass. Landing-page users type a
+    // message; we PUT the pass with that message in the LATEST UPDATE back field
+    // (changeMessage triggers the push). Rate limited to prevent abuse.
+    if (req.method === "POST" && url.pathname === "/api/demo/notify") {
+      if (!demoSerial || !wwKey) { end(503, { "content-type": "application/json" }, JSON.stringify({ error: "demo not configured" })); return; }
+      // Very small per-IP rate limit (in-memory; resets on restart)
+      const bucket = (globalThis as any).__spDemoNotify ??= new Map<string, number[]>();
+      const now = Date.now();
+      const stamps = (bucket.get(ip) ?? []).filter((t: number) => now - t < 60_000);
+      if (stamps.length >= 3) {
+        end(429, { "content-type": "application/json" }, JSON.stringify({ error: "Slow down — max 3 pushes per minute per visitor." }));
+        return;
+      }
+      stamps.push(now); bucket.set(ip, stamps);
+      try {
+        const body = await readBody(req, BODY_LIMITS.json);
+        const parsed = JSON.parse(body.toString());
+        const raw = String(parsed.message ?? "").trim();
+        if (!raw) { end(400, { "content-type": "application/json" }, JSON.stringify({ error: "message required" })); return; }
+        if (raw.length > 140) { end(400, { "content-type": "application/json" }, JSON.stringify({ error: "keep it under 140 characters" })); return; }
+        // Basic sanitation — reject obvious abuse patterns
+        if (/https?:\/\/(?!statuspass|walletwallet)|[^\p{L}\p{N}\s.,!?'":;()\-—·]/u.test(raw)) {
+          end(400, { "content-type": "application/json" }, JSON.stringify({ error: "letters, numbers, and punctuation only" }));
+          return;
+        }
+        const logoUrl = `${config.publicBaseUrl}/logo.png`;
+        const galleryUrl = `${config.publicBaseUrl}/g/demo`;
+        // Toggle a hidden counter suffix so identical bodies don't get suppressed by WW
+        const nonce = String(Math.floor(Date.now() / 1000) % 1000).padStart(3, "0");
+        const wwBody = {
+          barcodeValue: galleryUrl, barcodeFormat: "QR",
+          logoText: "StatusPass", description: "Homepage Redesign · Demo",
+          organizationName: "StatusPass",
+          headerFields: [{ label: "CLIENT", value: "DEMO PROJECT" }],
+          primaryFields: [{
+            label: "LATEST",
+            // Show the first ~50 chars of the message as the primary field
+            value: raw.length > 50 ? raw.slice(0, 47) + "…" : raw,
+            changeMessage: `${raw}\n(#${nonce})`,
+          }],
+          secondaryFields: [
+            { label: "FROM", value: "Landing demo" },
+            { label: "SENT", value: new Date().toISOString().slice(11, 16) + " UTC" },
+          ],
+          backFields: [
+            { label: "Full message", value: raw },
+            { label: "About", value: "Sent from the StatusPass landing page. Anyone can push a message to this shared demo pass. In production you control who can update each client's pass." },
+          ],
+          color: "#1B212E",
+          logoURL: logoUrl,
+          sharingProhibited: false,
+        };
+        const res = await fetch(`https://api.walletwallet.dev/api/passes/${demoSerial}`, {
+          method: "PUT",
+          headers: { "content-type": "application/json", authorization: `Bearer ${wwKey}` },
+          body: JSON.stringify(wwBody),
+        });
+        if (!res.ok) { end(502, { "content-type": "application/json" }, JSON.stringify({ error: `WW error ${res.status}` })); return; }
+        end(200, { "content-type": "application/json" }, JSON.stringify({ ok: true, sent: raw }));
+      } catch (e: any) { end(500, { "content-type": "application/json" }, JSON.stringify({ error: e.message })); }
+      return;
+    }
+
     if (req.method === "POST" && url.pathname === "/api/demo/move") {
       if (!demoSerial || !wwKey) { end(503, { "content-type": "application/json" }, JSON.stringify({ error: "demo not configured" })); return; }
+      // Notifications: concrete + action-oriented. Format: "STATUS · what changed · what to do next"
       const DEMO_PHASES: Record<string, { phase: string; pct: string; status: string; msg: string; deliverable: string; nextMilestone: string }> = {
-        "0": { phase: "DISCOVERY",  pct: "0%",   status: "On Track",    msg: "Discovery is underway — goals and scope are being mapped.",          deliverable: "Kickoff notes",  nextMilestone: "Discovery review" },
-        "1": { phase: "DESIGN",     pct: "25%",  status: "On Track",    msg: "Design has begun — first concepts land on the shelf this week.",    deliverable: "Moodboard",      nextMilestone: "v1 concepts" },
-        "2": { phase: "BUILD",      pct: "50%",  status: "On Track",    msg: "The build is in motion — the staging site is live behind your QR.", deliverable: "Staging live",   nextMilestone: "First internal QA" },
-        "3": { phase: "IN REVIEW",  pct: "75%",  status: "In Progress", msg: "The homepage has moved to review and is awaiting final copy.",      deliverable: "v3 shipped",     nextMilestone: "Final copy sign-off" },
-        "4": { phase: "DELIVERED",  pct: "100%", status: "Complete",    msg: "Delivered — every demo and deliverable is on your shelf.",          deliverable: "Handed off",     nextMilestone: "30-day retro" },
+        "0": { phase: "DISCOVERY",  pct: "0%",   status: "On Track",    msg: "Kickoff done. Discovery brief is on your shelf — tap the QR to review.",         deliverable: "Kickoff notes",  nextMilestone: "Discovery review" },
+        "1": { phase: "DESIGN",     pct: "25%",  status: "On Track",    msg: "Moodboard approved. First concepts drop Wednesday — I'll ping when they land.",  deliverable: "Moodboard",      nextMilestone: "v1 concepts" },
+        "2": { phase: "BUILD",      pct: "50%",  status: "On Track",    msg: "Staging is live — tap the QR, then Sprint Preview. Feedback by Fri helps most.", deliverable: "Staging live",   nextMilestone: "First internal QA" },
+        "3": { phase: "IN REVIEW",  pct: "75%",  status: "In Progress", msg: "Homepage v3 is up. Waiting on final copy from you — target ship next Tuesday.",  deliverable: "v3 shipped",     nextMilestone: "Final copy sign-off" },
+        "4": { phase: "DELIVERED",  pct: "100%", status: "Complete",    msg: "Delivered. All assets handed off. Demo shelf has every Loom, mock, and preview.", deliverable: "Handed off",     nextMilestone: "30-day retro" },
       };
       try {
         const body = await readBody(req, BODY_LIMITS.json);
@@ -506,9 +570,9 @@ export function startServer(overrides: Partial<{
           primaryFields: [{
             label: "CURRENT FOCUS",
             value: d.phase,
-            // Apple Wallet requires %@ in changeMessage — it substitutes with the new value.
-            // Placing it at the front reads naturally: "IN REVIEW — The homepage has moved to review..."
-            changeMessage: `%@ — ${d.msg}`,
+            // %@ is required. Put it at the end so the actionable sentence leads.
+            // Renders as: "Homepage v3 is up. Waiting on final copy from you… IN REVIEW"
+            changeMessage: `${d.msg}\n(now %@)`,
           }],
           secondaryFields: [
             { label: "STATUS", value: d.status },

@@ -216,6 +216,19 @@ footer .mono{font-size:.68rem;letter-spacing:.14em;color:var(--mute)}
 .add-wallet-label{font-size:.58rem;color:rgba(255,255,255,.35);letter-spacing:.12em;text-transform:uppercase;margin-top:8px;font-family:ui-monospace,monospace;text-align:center}
 .qr-wrap a img{display:block;border-radius:6px}
 
+
+/* ── Manual push box ── */
+.pushbox{margin-top:16px;padding:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);border-radius:12px}
+.pushbox-label{font-size:.7rem;color:rgba(255,255,255,.55);letter-spacing:.06em;margin-bottom:8px;text-transform:uppercase;font-family:ui-monospace,monospace}
+.pushbox-form{display:flex;gap:8px;flex-wrap:wrap}
+.pushbox-form input{flex:1;min-width:0;padding:9px 12px;font-size:.9rem;border:1px solid rgba(255,255,255,.15);background:#0B0E16;color:#F2F4F9;border-radius:8px;font-family:inherit}
+.pushbox-form input:focus{outline:2px solid #C9A96A;outline-offset:1px}
+.pushbox-form button{padding:9px 16px;background:#C9A96A;color:#0B0E16;font-weight:700;font-size:.85rem;border:none;border-radius:8px;cursor:pointer;white-space:nowrap;transition:opacity .15s}
+.pushbox-form button:hover{opacity:.9}
+.pushbox-form button:disabled{opacity:.5;cursor:wait}
+.pushbox-status{font-size:.78rem;margin-top:8px;min-height:1.2em}
+.pushbox-status.ok{color:#5FB98A}
+.pushbox-status.err{color:#D96C6C}
 </style>
 </head>
 <body>
@@ -319,6 +332,15 @@ footer .mono{font-size:.68rem;letter-spacing:.14em;color:var(--mute)}
       <div class="k-hint">
         <span>Drag the card — or tap a phase:</span>
         <div class="stepper" id="stepper"></div>
+      </div>
+      
+      <div class="pushbox">
+        <div class="pushbox-label">Or send a custom update to the demo pass:</div>
+        <form class="pushbox-form" id="pushForm" onsubmit="return sendCustomPush(event)">
+          <input id="pushInput" type="text" maxlength="140" placeholder="e.g. Payment received — invoice #240 paid, thanks!" autocomplete="off">
+          <button type="submit" id="pushBtn">Push to Wallet →</button>
+        </form>
+        <div class="pushbox-status" id="pushStatus"></div>
       </div>
       
 
@@ -559,6 +581,41 @@ function updateQRForUrl(url){
   if(!svg) return;
   // Keep existing visual but add a center URL indicator
   // The actual link is on the <a> wrapper — clicking/tapping works on mobile
+}
+
+async function sendCustomPush(ev){
+  ev.preventDefault();
+  const input = document.getElementById('pushInput');
+  const btn = document.getElementById('pushBtn');
+  const status = document.getElementById('pushStatus');
+  const msg = (input.value || '').trim();
+  if (!msg) { status.textContent = 'Type a message first.'; status.className = 'pushbox-status err'; return false; }
+  status.textContent = 'Sending push…';
+  status.className = 'pushbox-status';
+  btn.disabled = true;
+  try {
+    const r = await fetch('/api/demo/notify', {
+      method: 'POST',
+      headers: {'content-type':'application/json'},
+      body: JSON.stringify({message: msg}),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Push failed');
+    status.textContent = '✓ Sent — check the wallet pass on any device with the demo added.';
+    status.className = 'pushbox-status ok';
+    input.value = '';
+    // Also animate the on-page notification for immediate feedback
+    if (typeof typeMsg === 'function') {
+      const n = document.getElementById('notif');
+      if (n) { n.classList.remove('show'); setTimeout(()=>{ n.classList.add('show'); typeMsg(msg); }, 200); }
+    }
+  } catch (e) {
+    status.textContent = '✗ ' + e.message;
+    status.className = 'pushbox-status err';
+  } finally {
+    btn.disabled = false;
+  }
+  return false;
 }
 
 async function pushDemoUpdate(idx){
