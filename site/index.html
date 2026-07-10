@@ -217,18 +217,20 @@ footer .mono{font-size:.68rem;letter-spacing:.14em;color:var(--mute)}
 .qr-wrap a img{display:block;border-radius:6px}
 
 
-/* ── Manual push box ── */
-.pushbox{margin-top:16px;padding:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);border-radius:12px}
-.pushbox-label{font-size:.7rem;color:rgba(255,255,255,.55);letter-spacing:.06em;margin-bottom:8px;text-transform:uppercase;font-family:ui-monospace,monospace}
-.pushbox-form{display:flex;gap:8px;flex-wrap:wrap}
-.pushbox-form input{flex:1;min-width:0;padding:9px 12px;font-size:.9rem;border:1px solid rgba(255,255,255,.15);background:#0B0E16;color:#F2F4F9;border-radius:8px;font-family:inherit}
-.pushbox-form input:focus{outline:2px solid #C9A96A;outline-offset:1px}
-.pushbox-form button{padding:9px 16px;background:#C9A96A;color:#0B0E16;font-weight:700;font-size:.85rem;border:none;border-radius:8px;cursor:pointer;white-space:nowrap;transition:opacity .15s}
-.pushbox-form button:hover{opacity:.9}
-.pushbox-form button:disabled{opacity:.5;cursor:wait}
-.pushbox-status{font-size:.78rem;margin-top:8px;min-height:1.2em}
-.pushbox-status.ok{color:#5FB98A}
-.pushbox-status.err{color:#D96C6C}
+/* ── Send-a-notification box (matches WalletWallet dashboard style) ── */
+.pushbox{margin-top:18px;padding:20px;background:#F8F9FB;border:1px solid #E4E7EC;border-radius:14px;color:#0B0E16}
+.pushbox-title{font-size:1.05rem;font-weight:700;color:#0B0E16;margin-bottom:14px}
+.pushbox-form{display:flex;flex-direction:column;gap:10px}
+.pushbox-form input{width:100%;padding:11px 14px;font-size:.95rem;border:1px solid #D0D5DD;background:#fff;color:#0B0E16;border-radius:8px;font-family:inherit}
+.pushbox-form input::placeholder{color:#98A2B3}
+.pushbox-form input:focus{outline:2px solid #C9A96A;outline-offset:1px;border-color:#C9A96A}
+.pushbox-form button{padding:11px 16px;background:#98A2B3;color:#fff;font-weight:600;font-size:.95rem;border:none;border-radius:8px;cursor:pointer;transition:background .15s}
+.pushbox-form button:hover{background:#7A8391}
+.pushbox-form button:disabled{opacity:.6;cursor:wait}
+.pushbox-hint{font-size:.78rem;color:#667085;margin-top:10px;line-height:1.5}
+.pushbox-status{font-size:.82rem;margin-top:8px;min-height:1.2em;font-weight:500}
+.pushbox-status.ok{color:#0F9B69}
+.pushbox-status.err{color:#B42318}
 </style>
 </head>
 <body>
@@ -335,11 +337,12 @@ footer .mono{font-size:.68rem;letter-spacing:.14em;color:var(--mute)}
       </div>
       
       <div class="pushbox">
-        <div class="pushbox-label">Or send a live push notification to the stakeholder:</div>
+        <div class="pushbox-title">Send a notification</div>
         <form class="pushbox-form" id="pushForm" onsubmit="return sendCustomPush(event)">
-          <input id="pushInput" type="text" maxlength="140" placeholder="e.g. Payment received — invoice #240 is cleared, thanks!" autocomplete="off">
-          <button type="submit" id="pushBtn">Send push →</button>
+          <input id="pushInput" type="text" maxlength="140" placeholder="Free coffee on us!" autocomplete="off">
+          <button type="submit" id="pushBtn">Send</button>
         </form>
+        <div class="pushbox-hint">Your text shows on the Apple lock screen. Google shows a generic "New message" notification.</div>
         <div class="pushbox-status" id="pushStatus"></div>
       </div>
       
