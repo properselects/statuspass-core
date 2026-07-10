@@ -27,6 +27,7 @@ import { consoleEmailSender, createResendSender, priceToTierFromEnv, tierChangeF
 import { randomUUID } from "node:crypto";
 import { renderConsolePage } from "./console/ui.js";
 import { LOGO_PNG_B64 } from "./logo.js";
+import { logActivity, getActivity } from "./activity.js";
 import { createAnthropicClient, DEFAULT_ROUTING } from "./model/anthropic.js";
 
 // ── Pass delivery adapter (the BUY seam — AddToWallet-style vendor) ──
@@ -186,7 +187,26 @@ export function startServer(overrides: Partial<{
   // Tracked promise: every request awaits it, so nothing races the bootstrap.
   const ready = stores.getAccount(config.defaultAccountId).then(() => undefined).catch(() =>
     stores.saveAccount({ id: config.defaultAccountId, name: "Default", defaults: {}, internalNames: [] }),
-  );
+  ).then(async () => {
+    // Console-ready: pre-seed one sample pass so the console shows something
+    // useful the first time it's opened. Opt-in via STATUSPASS_SEED_DEMO=1.
+    if (process.env.STATUSPASS_SEED_DEMO !== "1") return;
+    try {
+      const existing = await stores.listPassesForAccount(config.defaultAccountId).catch(() => []);
+      if (!existing.some((p: any) => p.id === "demo-homepage-redesign")) {
+        const now = new Date().toISOString();
+        const samplePass: any = {
+          id: "demo-homepage-redesign", accountId: config.defaultAccountId,
+          profile: "client-delivery", recipientLabel: "Acme Corp — CEO (demo)",
+          boardId: "internal", currentPhase: "In Review", currentRag: undefined,
+          lastUpdatedAt: now, overrides: {},
+        };
+        await stores.savePass(samplePass);
+        logActivity({ scope: config.defaultAccountId, passId: samplePass.id, passLabel: samplePass.recipientLabel,
+          kind: "pass_issued", summary: "Sample pass added — Homepage Redesign for Acme Corp" });
+      }
+    } catch (e) { console.warn("[seed]", e); }
+  });
   const webhookConfig = {
     callbackUrl: `${config.publicBaseUrl}/webhooks/trello`,
     apiSecret: config.trelloApiSecret,
@@ -478,6 +498,12 @@ export function startServer(overrides: Partial<{
       return;
     }
 
+    if (req.method === "GET" && url.pathname === "/api/demo/activity") {
+      const events = getActivity("demo", 30);
+      end(200, { "content-type": "application/json", "cache-control": "no-store" }, JSON.stringify({ events }));
+      return;
+    }
+
     if (req.method === "GET" && url.pathname === "/logo.png") {
       const buf = Buffer.from(LOGO_PNG_B64, "base64");
       end(200, { "content-type": "image/png", "cache-control": "public,max-age=604800" }, buf);
@@ -554,6 +580,7 @@ export function startServer(overrides: Partial<{
           body: JSON.stringify(wwBody),
         });
         if (!res.ok) { end(502, { "content-type": "application/json" }, JSON.stringify({ error: `WW error ${res.status}` })); return; }
+        logActivity({ scope: "demo", passLabel: "Homepage Redesign — Acme Corp", kind: "custom_push", actor: ip, summary: `Push sent to stakeholder`, detail: raw });
         end(200, { "content-type": "application/json" }, JSON.stringify({ ok: true, sent: raw }));
       } catch (e: any) { end(500, { "content-type": "application/json" }, JSON.stringify({ error: e.message })); }
       return;
@@ -604,6 +631,7 @@ export function startServer(overrides: Partial<{
           body: JSON.stringify(wwBody),
         });
         if (!res.ok) { end(502, { "content-type": "application/json" }, JSON.stringify({ error: `WW error ${res.status}` })); return; }
+        logActivity({ scope: "demo", passLabel: "Homepage Redesign — Acme Corp", kind: "phase_move", actor: ip, summary: `Moved to ${d.phase}`, detail: d.msg });
         end(200, { "content-type": "application/json" }, JSON.stringify({ ok: true, phase: d.phase, msg: d.msg }));
       } catch (e: any) { end(500, { "content-type": "application/json" }, JSON.stringify({ error: e.message })); }
       return;

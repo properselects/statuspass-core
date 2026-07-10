@@ -98,6 +98,17 @@ export function renderConsolePage(): string {
   .del-x{background:none;border:none;color:var(--mute);cursor:pointer;font-size:1.1rem;padding:4px 8px;border-radius:6px;flex-shrink:0}
   .del-x:hover{color:var(--red)}
 
+  /* history rows */
+  .hrow{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+  .hrow:last-child{border-bottom:none}
+  .hicon{width:32px;height:32px;border-radius:8px;background:var(--ink);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
+  .hbody{flex:1;min-width:0}
+  .hhead{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:3px}
+  .hlabel{font-size:.72rem;color:var(--foil);font-family:var(--mono);letter-spacing:.06em;text-transform:uppercase}
+  .hwhen{font-size:.7rem;color:var(--mute);font-family:var(--mono);white-space:nowrap;flex-shrink:0}
+  .hsummary{font-size:.9rem;color:var(--text);line-height:1.4}
+  .hdetail{font-size:.82rem;color:var(--mute);margin-top:4px;line-height:1.45;font-style:italic}
+
   /* map rows */
   .maprow{display:flex;gap:8px;margin-bottom:8px;align-items:center}
   .maprow span{color:var(--mute);flex-shrink:0}
@@ -125,6 +136,7 @@ export function renderConsolePage(): string {
 <nav role="tablist">
   <button data-tab="clients" aria-current="true">👤 Clients</button>
   <button data-tab="board">📋 Board</button>
+  <button data-tab="history">🕒 History</button>
   <button data-tab="settings">⚙ Settings</button>
 </nav>
 
@@ -511,7 +523,54 @@ async function showSettings(){
   } catch(e){ view.innerHTML = '<div class="empty"><span class="emoji">⚠️</span><h3>Could not load settings</h3><p>'+esc(e.message)+'</p></div>'; }
 }
 
-const tabs = { clients: showClients, board: showBoard, settings: showSettings };
+// ── History tab ──
+async function showHistory(){
+  setTab('history');
+  view.innerHTML = '<div class="empty"><span class="emoji">⏳</span><h3>Loading history…</h3></div>';
+  try {
+    const {events} = await api('/api/activity');
+    view.innerHTML = '';
+    if (!events.length) {
+      view.appendChild(el('<div class="empty">'+
+        '<span class="emoji">🕒</span>'+
+        '<h3>No activity yet</h3>'+
+        '<p>Every phase move, deliverable, and update to any client pass will show up here.</p>'+
+        '</div>').firstChild);
+      return;
+    }
+    const iconFor = (k) => ({
+      phase_move:'📋', custom_push:'📣', pass_issued:'✨',
+      deliverable_added:'📁', deliverable_removed:'🗑️',
+      manual_update:'✉️', notification:'🔔'
+    }[k] || '•');
+    const list = el('<div class="panel"><div class="panel-title">📜 Recent activity ('+events.length+')</div><div id="hlist"></div></div>').firstChild;
+    view.appendChild(list);
+    const hlist = list.querySelector('#hlist');
+    const fmtWhen = (iso) => {
+      const d = new Date(iso), now = new Date();
+      const s = Math.floor((now.getTime()-d.getTime())/1000);
+      if (s < 60) return 'just now';
+      if (s < 3600) return Math.floor(s/60)+'m ago';
+      if (s < 86400) return Math.floor(s/3600)+'h ago';
+      return d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+' '+d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+    };
+    for (const ev of events) {
+      const row = el('<div class="hrow">'+
+        '<div class="hicon">'+iconFor(ev.kind)+'</div>'+
+        '<div class="hbody">'+
+          '<div class="hhead">'+
+            (ev.passLabel ? '<span class="hlabel">'+esc(ev.passLabel)+'</span>' : '')+
+            '<span class="hwhen">'+esc(fmtWhen(ev.at))+'</span>'+
+          '</div>'+
+          '<div class="hsummary">'+esc(ev.summary)+'</div>'+
+          (ev.detail ? '<div class="hdetail">"'+esc(ev.detail)+'"</div>' : '')+
+        '</div></div>').firstChild;
+      hlist.appendChild(row);
+    }
+  } catch(e){ view.innerHTML = '<div class="empty"><span class="emoji">⚠️</span><h3>Could not load history</h3><p>'+esc(e.message)+'</p></div>'; }
+}
+
+const tabs = { clients: showClients, board: showBoard, history: showHistory, settings: showSettings };
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
   tabs[b.dataset.tab]();
 });

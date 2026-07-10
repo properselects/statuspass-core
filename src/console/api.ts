@@ -12,6 +12,7 @@ import { resolveRules } from "../merge.js";
 import { mintBrandingToken, handleAssetUpload, type BrandingStore } from "../branding.js";
 import { mintGalleryToken, newDeliverable, validateLinkDeliverable } from "../gallery.js";
 import { canIssuePass } from "../billing.js";
+import { logActivity, getActivity } from "../activity.js";
 
 // Console needs two writes beyond the pipeline's Stores.
 export interface ConsoleStores extends Stores {
@@ -115,6 +116,8 @@ export async function handleConsoleApi(
       }
     }
     const brandingToken = mintBrandingToken(pass.id, 72, ctx.config.linkTokenSecret);
+    logActivity({ scope: accountId, passId: pass.id, passLabel: pass.recipientLabel, kind: "pass_issued",
+      summary: `Issued a new pass for ${pass.recipientLabel}` });
     return json(201, {
       pass,
       brandingUrl: `${ctx.config.publicBaseUrl}/brand/${brandingToken}`,
@@ -159,6 +162,8 @@ export async function handleConsoleApi(
     // route manual events to this pass regardless of card index
     const deps: PipelineDeps = { ...ctx.deps, getPassForBoardCard: async () => pass };
     const outcome = await handleBoardEvent(event, deps, ctx.model);
+    logActivity({ scope: accountId, passId: pass.id, passLabel: pass.recipientLabel, kind: "manual_update",
+      summary: `Sent update${body.phase ? ` (→ ${body.phase})` : ""}`, detail: (outcome as any)?.text ?? body.note });
     return json(200, { outcome });
   }
 
@@ -197,7 +202,15 @@ export async function handleConsoleApi(
     };
     const deps: PipelineDeps = { ...ctx.deps, getPassForBoardCard: async () => pass };
     const outcome = await handleBoardEvent(event, deps, ctx.model);
+    logActivity({ scope: accountId, passId: pass.id, passLabel: pass.recipientLabel, kind: "phase_move",
+      summary: `Moved ${pass.currentPhase} → ${body.phase}`, detail: body.note });
     return json(200, { outcome });
+  }
+
+  // ── GET /api/activity — recent events for this account ──
+  if (req.method === "GET" && req.path === "/api/activity") {
+    const events = getActivity(accountId, 100);
+    return json(200, { events });
   }
 
   // ── Deliverables: the artifact repo behind the pass's gallery link ──
@@ -221,12 +234,16 @@ export async function handleConsoleApi(
       const d = newDeliverable(passId, { kind: "link", title: body.title!, url: body.url });
       await ctx.brandingStore.addDeliverable(d);
       const outcome = await notifyDeliverable(ctx, pass, d.title);
+      logActivity({ scope: accountId, passId: pass.id, passLabel: pass.recipientLabel, kind: "deliverable_added",
+        summary: `Added deliverable: ${d.title}`, detail: body.url });
       return json(201, { deliverable: d, outcome });
     }
     if (req.method === "DELETE") {
       const body = parse<{ id?: string }>({});
       if (!body.id) return json(400, { error: "id is required." });
       await ctx.brandingStore.removeDeliverable(passId, body.id);
+      logActivity({ scope: accountId, passId: pass.id, passLabel: pass.recipientLabel, kind: "deliverable_removed",
+        summary: `Removed a deliverable` });
       return json(200, { ok: true });
     }
   }
@@ -246,6 +263,8 @@ export async function handleConsoleApi(
     const d = newDeliverable(passId, { kind: "image", title, assetId: upload.assetId });
     await ctx.brandingStore.addDeliverable(d);
     const outcome = await notifyDeliverable(ctx, pass, d.title);
+    logActivity({ scope: accountId, passId: pass.id, passLabel: pass.recipientLabel, kind: "deliverable_added",
+      summary: `Uploaded deliverable: ${d.title}` });
     return json(201, { deliverable: d, outcome });
   }
 
