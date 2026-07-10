@@ -139,6 +139,16 @@ const _dir = dirname(fileURLToPath(import.meta.url));
 let landingHtml = "";
 try { landingHtml = readFileSync(join(_dir, "../site/index.html"), "utf8"); } catch { landingHtml = ""; }
 
+// Demo pass phase table (used by /api/demo/move + /api/demo/notify)
+const DEMO_PHASES = {
+  "0": { phase: "DISCOVERY",  pct: "0%",   status: "On Track",    msg: "Kickoff done. Discovery brief is on your shelf — tap the QR to review.",         deliverable: "Kickoff notes",  nextMilestone: "Discovery review" },
+  "1": { phase: "DESIGN",     pct: "25%",  status: "On Track",    msg: "Moodboard approved. First concepts drop Wednesday — I'll ping when they land.",  deliverable: "Moodboard",      nextMilestone: "v1 concepts" },
+  "2": { phase: "BUILD",      pct: "50%",  status: "On Track",    msg: "Staging is live — tap the QR, then Sprint Preview. Feedback by Fri helps most.", deliverable: "Staging live",   nextMilestone: "First internal QA" },
+  "3": { phase: "IN REVIEW",  pct: "75%",  status: "In Progress", msg: "Homepage v3 is up. Waiting on final copy from you — target ship next Tuesday.",  deliverable: "v3 shipped",     nextMilestone: "Final copy sign-off" },
+  "4": { phase: "DELIVERED",  pct: "100%", status: "Complete",    msg: "Delivered. All assets handed off. Demo shelf has every Loom, mock, and preview.", deliverable: "Handed off",     nextMilestone: "30-day retro" },
+} as const;
+function getDemoPhase(idx: string) { return (DEMO_PHASES as any)[idx] ?? DEMO_PHASES["0"]; }
+
 export function startServer(overrides: Partial<{
   config: AppConfig; stores: Stores; delivery: PassDeliveryAdapter; model: ModelClient;
   brandingStore: BrandingStore; email: EmailSender;
@@ -506,28 +516,33 @@ export function startServer(overrides: Partial<{
           end(400, { "content-type": "application/json" }, JSON.stringify({ error: "no external links or scripts, please" }));
           return;
         }
+        // Read the CURRENT demo phase so the pass face doesn't get rewritten.
+        // Only the invisible "Latest ping" back-field value changes, which is
+        // what triggers the lock-screen notification.
+        const state = (globalThis as any).__spDemoState ?? { idx: "0" };
         const logoUrl = `${config.publicBaseUrl}/logo.png`;
         const galleryUrl = `${config.publicBaseUrl}/g/demo`;
-        // Toggle a hidden counter suffix so identical bodies don't get suppressed by WW
-        const nonce = String(Math.floor(Date.now() / 1000) % 1000).padStart(3, "0");
+        const d = getDemoPhase(state.idx);
+        // Uniqueness token so consecutive identical messages still notify
+        const stamp = new Date().toISOString().slice(11, 19) + " UTC";
         const wwBody = {
           barcodeValue: galleryUrl, barcodeFormat: "QR",
           logoText: "StatusPass", description: "Homepage Redesign · Demo",
           organizationName: "StatusPass",
           headerFields: [{ label: "CLIENT", value: "DEMO PROJECT" }],
-          primaryFields: [{
-            label: "LATEST",
-            // Show the first ~50 chars of the message as the primary field
-            value: raw.length > 50 ? raw.slice(0, 47) + "…" : raw,
-            changeMessage: `${raw}\n(#${nonce})`,
-          }],
+          // Keep pass face identical — same primary/secondary as current phase
+          primaryFields: [{ label: "CURRENT FOCUS", value: d.phase }],
           secondaryFields: [
-            { label: "FROM", value: "Landing demo" },
-            { label: "SENT", value: new Date().toISOString().slice(11, 16) + " UTC" },
+            { label: "STATUS", value: d.status },
+            { label: "PROGRESS", value: d.pct },
+            { label: "DELIVERABLE", value: d.deliverable },
           ],
           backFields: [
-            { label: "Full message", value: raw },
-            { label: "About", value: "Sent from the StatusPass landing page. Anyone can push a message to this shared demo pass. In production you control who can update each client's pass." },
+            // Update this hidden field — value change + changeMessage fires the push
+            { label: "Latest ping", value: `${raw} · ${stamp}`, changeMessage: `${raw}\n(%@ — latest ping)` },
+            { label: "Next milestone", value: d.nextMilestone },
+            { label: "Demo shelf", value: galleryUrl },
+            { label: "About this pass", value: "Live StatusPass demo. Anyone can push a message from statuspass-production.up.railway.app to this shared demo pass." },
           ],
           color: "#1B212E",
           logoURL: logoUrl,
@@ -546,19 +561,13 @@ export function startServer(overrides: Partial<{
 
     if (req.method === "POST" && url.pathname === "/api/demo/move") {
       if (!demoSerial || !wwKey) { end(503, { "content-type": "application/json" }, JSON.stringify({ error: "demo not configured" })); return; }
-      // Notifications: concrete + action-oriented. Format: "STATUS · what changed · what to do next"
-      const DEMO_PHASES: Record<string, { phase: string; pct: string; status: string; msg: string; deliverable: string; nextMilestone: string }> = {
-        "0": { phase: "DISCOVERY",  pct: "0%",   status: "On Track",    msg: "Kickoff done. Discovery brief is on your shelf — tap the QR to review.",         deliverable: "Kickoff notes",  nextMilestone: "Discovery review" },
-        "1": { phase: "DESIGN",     pct: "25%",  status: "On Track",    msg: "Moodboard approved. First concepts drop Wednesday — I'll ping when they land.",  deliverable: "Moodboard",      nextMilestone: "v1 concepts" },
-        "2": { phase: "BUILD",      pct: "50%",  status: "On Track",    msg: "Staging is live — tap the QR, then Sprint Preview. Feedback by Fri helps most.", deliverable: "Staging live",   nextMilestone: "First internal QA" },
-        "3": { phase: "IN REVIEW",  pct: "75%",  status: "In Progress", msg: "Homepage v3 is up. Waiting on final copy from you — target ship next Tuesday.",  deliverable: "v3 shipped",     nextMilestone: "Final copy sign-off" },
-        "4": { phase: "DELIVERED",  pct: "100%", status: "Complete",    msg: "Delivered. All assets handed off. Demo shelf has every Loom, mock, and preview.", deliverable: "Handed off",     nextMilestone: "30-day retro" },
-      };
       try {
         const body = await readBody(req, BODY_LIMITS.json);
         const parsed = JSON.parse(body.toString());
         const idx = String(parsed.idx ?? "0");
-        const d = DEMO_PHASES[idx] ?? DEMO_PHASES["0"];
+        const d = getDemoPhase(idx);
+        // Persist current phase idx so /api/demo/notify preserves the pass face
+        (globalThis as any).__spDemoState = { idx };
         const logoUrl = `${config.publicBaseUrl}/logo.png`;
         const galleryUrl = `${config.publicBaseUrl}/g/demo`;
         const wwBody = {

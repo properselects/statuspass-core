@@ -335,10 +335,10 @@ footer .mono{font-size:.68rem;letter-spacing:.14em;color:var(--mute)}
       </div>
       
       <div class="pushbox">
-        <div class="pushbox-label">Or send a custom update to the demo pass:</div>
+        <div class="pushbox-label">Or send a live push notification to the stakeholder:</div>
         <form class="pushbox-form" id="pushForm" onsubmit="return sendCustomPush(event)">
-          <input id="pushInput" type="text" maxlength="140" placeholder="e.g. Payment received — invoice #240 paid, thanks!" autocomplete="off">
-          <button type="submit" id="pushBtn">Push to Wallet →</button>
+          <input id="pushInput" type="text" maxlength="140" placeholder="e.g. Payment received — invoice #240 is cleared, thanks!" autocomplete="off">
+          <button type="submit" id="pushBtn">Send push →</button>
         </form>
         <div class="pushbox-status" id="pushStatus"></div>
       </div>
@@ -601,7 +601,7 @@ async function sendCustomPush(ev){
     });
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || 'Push failed');
-    status.textContent = '✓ Sent — check the wallet pass on any device with the demo added.';
+    status.textContent = '✓ Push sent. Check any phone with the demo pass added — the pass card stays the same, only the notification fires.';
     status.className = 'pushbox-status ok';
     input.value = '';
     // Also animate the on-page notification for immediate feedback
