@@ -227,7 +227,8 @@ export function startServer(overrides: Partial<{
     }
 
     // Deliverables gallery: GET /g/:token → hosted page
-    if (req.method === "GET" && url.pathname.startsWith("/g/")) {
+    // NOTE: /g/demo is intercepted below (public demo gallery) — the token route ignores it
+    if (req.method === "GET" && url.pathname.startsWith("/g/") && url.pathname !== "/g/demo") {
       const result = redeemGalleryToken(url.pathname.slice(3), config.linkTokenSecret);
       if (!result.ok) {
         end(result.reason === "expired" ? 410 : 404, { "content-type": "text/plain" },
