@@ -546,7 +546,7 @@ export function startServer(overrides: Partial<{
         // Only the invisible "Latest ping" back-field value changes, which is
         // what triggers the lock-screen notification.
         const state = (globalThis as any).__spDemoState ?? { idx: "0" };
-        const logoUrl = `${config.publicBaseUrl}/logo.png`;
+        const logoUrl = `${config.publicBaseUrl}/logo.png?v=2`;
         const galleryUrl = `${config.publicBaseUrl}/g/demo`;
         const d = getDemoPhase(state.idx);
         // Uniqueness token so consecutive identical messages still notify
@@ -595,7 +595,7 @@ export function startServer(overrides: Partial<{
         const d = getDemoPhase(idx);
         // Persist current phase idx so /api/demo/notify preserves the pass face
         (globalThis as any).__spDemoState = { idx };
-        const logoUrl = `${config.publicBaseUrl}/logo.png`;
+        const logoUrl = `${config.publicBaseUrl}/logo.png?v=2`;
         const galleryUrl = `${config.publicBaseUrl}/g/demo`;
         const wwBody = {
           // QR on the installed pass points to the demo gallery / mini-repo
