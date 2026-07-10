@@ -484,11 +484,11 @@ export function startServer(overrides: Partial<{
     if (req.method === "POST" && url.pathname === "/api/demo/move") {
       if (!demoSerial || !wwKey) { end(503, { "content-type": "application/json" }, JSON.stringify({ error: "demo not configured" })); return; }
       const DEMO_PHASES: Record<string, { phase: string; pct: string; status: string; msg: string; deliverable: string; nextMilestone: string }> = {
-        "0": { phase: "DISCOVERY",  pct: "0% COMPLETE",   status: "ON TRACK",     msg: "Discovery is underway — goals and scope are being mapped.",             deliverable: "KICKOFF NOTES",         nextMilestone: "Discovery review" },
-        "1": { phase: "DESIGN",     pct: "25% COMPLETE",  status: "ON TRACK",     msg: "Design has begun — first concepts land on the shelf this week.",       deliverable: "MOODBOARD APPROVED",    nextMilestone: "v1 concepts" },
-        "2": { phase: "BUILD",      pct: "50% COMPLETE",  status: "ON TRACK",     msg: "The build is in motion — the staging site is live behind your QR.",    deliverable: "STAGING SITE LIVE",     nextMilestone: "First internal QA" },
-        "3": { phase: "IN REVIEW",  pct: "75% COMPLETE",  status: "IN PROGRESS",  msg: "The homepage has moved to review and is awaiting final copy.",         deliverable: "HOMEPAGE v3 SHIPPED",   nextMilestone: "Final copy sign-off" },
-        "4": { phase: "DELIVERED",  pct: "100% COMPLETE", status: "COMPLETE",     msg: "Delivered — every demo and deliverable is on your shelf.",             deliverable: "FINAL ASSETS HANDED OFF", nextMilestone: "30-day retro" },
+        "0": { phase: "DISCOVERY",  pct: "0%",   status: "On Track",    msg: "Discovery is underway — goals and scope are being mapped.",          deliverable: "Kickoff notes",  nextMilestone: "Discovery review" },
+        "1": { phase: "DESIGN",     pct: "25%",  status: "On Track",    msg: "Design has begun — first concepts land on the shelf this week.",    deliverable: "Moodboard",      nextMilestone: "v1 concepts" },
+        "2": { phase: "BUILD",      pct: "50%",  status: "On Track",    msg: "The build is in motion — the staging site is live behind your QR.", deliverable: "Staging live",   nextMilestone: "First internal QA" },
+        "3": { phase: "IN REVIEW",  pct: "75%",  status: "In Progress", msg: "The homepage has moved to review and is awaiting final copy.",      deliverable: "v3 shipped",     nextMilestone: "Final copy sign-off" },
+        "4": { phase: "DELIVERED",  pct: "100%", status: "Complete",    msg: "Delivered — every demo and deliverable is on your shelf.",          deliverable: "Handed off",     nextMilestone: "30-day retro" },
       };
       try {
         const body = await readBody(req, BODY_LIMITS.json);
@@ -507,13 +507,13 @@ export function startServer(overrides: Partial<{
           secondaryFields: [
             { label: "STATUS", value: d.status },
             { label: "PROGRESS", value: d.pct },
-            { label: "LAST DELIVERABLE", value: d.deliverable, changeMessage: `New deliverable: ${d.deliverable}` },
-            { label: "NEXT MILESTONE", value: d.nextMilestone },
+            { label: "DELIVERABLE", value: d.deliverable, changeMessage: `New deliverable: ${d.deliverable}` },
           ],
           backFields: [
-            { label: "LATEST UPDATE", value: d.msg },
-            { label: "DEMO SHELF", value: galleryUrl },
-            { label: "ABOUT", value: "Live StatusPass demo. Visit statuspass-production.up.railway.app and drag the kanban card to see this pass update in real time." },
+            { label: "Next milestone", value: d.nextMilestone },
+            { label: "Latest update", value: d.msg },
+            { label: "Demo shelf", value: galleryUrl },
+            { label: "About this pass", value: "Live StatusPass demo. Visit statuspass-production.up.railway.app and drag the kanban card to watch this pass update in real time." },
           ],
           color: "#1B212E",
           logoURL: logoUrl,
