@@ -502,8 +502,8 @@ export function startServer(overrides: Partial<{
         if (!raw) { end(400, { "content-type": "application/json" }, JSON.stringify({ error: "message required" })); return; }
         if (raw.length > 140) { end(400, { "content-type": "application/json" }, JSON.stringify({ error: "keep it under 140 characters" })); return; }
         // Basic sanitation — reject obvious abuse patterns
-        if (/https?:\/\/(?!statuspass|walletwallet)|[^\p{L}\p{N}\s.,!?'":;()\-—·]/u.test(raw)) {
-          end(400, { "content-type": "application/json" }, JSON.stringify({ error: "letters, numbers, and punctuation only" }));
+        if (/https?:\/\/(?!statuspass|walletwallet)|<script|javascript:|onerror=/i.test(raw)) {
+          end(400, { "content-type": "application/json" }, JSON.stringify({ error: "no external links or scripts, please" }));
           return;
         }
         const logoUrl = `${config.publicBaseUrl}/logo.png`;
