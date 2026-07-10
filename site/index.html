@@ -214,18 +214,6 @@ footer .mono{font-size:.68rem;letter-spacing:.14em;color:var(--mute)}
 .add-wallet-label{font-size:.58rem;color:rgba(255,255,255,.35);letter-spacing:.12em;text-transform:uppercase;margin-top:8px;font-family:ui-monospace,monospace;text-align:center}
 .qr-wrap a img{display:block;border-radius:6px}
 
-/* ── Live wallet QR codes ── */
-.wallet-qrs{text-align:center;margin-top:18px;padding:16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:14px}
-.wq-label{font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.45);margin-bottom:12px;font-family:ui-monospace,monospace}
-.wq-row{display:flex;justify-content:center;gap:16px}
-.wq-btn{display:flex;flex-direction:column;align-items:center;gap:8px;text-decoration:none;border-radius:12px;padding:10px 14px;border:1px solid rgba(201,169,106,.3);transition:border-color .2s,background .2s;background:rgba(0,0,0,.2)}
-.wq-btn:hover{border-color:rgba(201,169,106,.8);background:rgba(201,169,106,.06)}
-.wq-qr-wrap{border-radius:8px;overflow:hidden;background:#F2F4F9;padding:0;line-height:0}
-.wq-name{font-size:.72rem;color:rgba(255,255,255,.55);line-height:1.5;text-align:center}
-.wq-note{font-size:.65rem;color:rgba(255,255,255,.3);margin-top:10px;letter-spacing:.06em;font-family:ui-monospace,monospace}
-@media(max-width:480px){.wq-qr-wrap img{width:90px;height:90px}}
-
-.wq-simple{text-align:center;margin-top:8px;font-size:.68rem;color:rgba(255,255,255,.3);letter-spacing:.05em;font-family:ui-monospace,monospace}
 </style>
 </head>
 <body>
@@ -319,10 +307,7 @@ footer .mono{font-size:.68rem;letter-spacing:.14em;color:var(--mute)}
         <div class="stepper" id="stepper"></div>
       </div>
       
-      <!-- Tap to add note -->
-      <div class="wq-simple">
-        <span>↑ Tap the QR to add to Apple or Google Wallet</span>
-      </div>
+
     </div>
   </div>
 </header>
