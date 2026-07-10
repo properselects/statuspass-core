@@ -136,7 +136,7 @@ export function buildPipelineDeps(args: {
 
 const _dir = dirname(fileURLToPath(import.meta.url));
 let landingHtml = "";
-try { landingHtml = readFileSync(join(_dir, "../../site/index.html"), "utf8"); } catch { landingHtml = ""; }
+try { landingHtml = readFileSync(join(_dir, "../site/index.html"), "utf8"); } catch { landingHtml = ""; }
 
 export function startServer(overrides: Partial<{
   config: AppConfig; stores: Stores; delivery: PassDeliveryAdapter; model: ModelClient;
