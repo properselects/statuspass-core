@@ -503,11 +503,17 @@ export function startServer(overrides: Partial<{
           logoText: "StatusPass", description: "Homepage Redesign · Demo",
           organizationName: "StatusPass",
           headerFields: [{ label: "CLIENT", value: "DEMO PROJECT" }],
-          primaryFields: [{ label: "CURRENT FOCUS", value: d.phase, changeMessage: d.msg }],
+          primaryFields: [{
+            label: "CURRENT FOCUS",
+            value: d.phase,
+            // Apple Wallet requires %@ in changeMessage — it substitutes with the new value.
+            // Placing it at the front reads naturally: "IN REVIEW — The homepage has moved to review..."
+            changeMessage: `%@ — ${d.msg}`,
+          }],
           secondaryFields: [
             { label: "STATUS", value: d.status },
             { label: "PROGRESS", value: d.pct },
-            { label: "DELIVERABLE", value: d.deliverable, changeMessage: `New deliverable: ${d.deliverable}` },
+            { label: "DELIVERABLE", value: d.deliverable, changeMessage: "New deliverable: %@" },
           ],
           backFields: [
             { label: "Next milestone", value: d.nextMilestone },
