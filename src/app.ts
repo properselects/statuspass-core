@@ -527,9 +527,9 @@ export function startServer(overrides: Partial<{
         const stamp = new Date().toISOString().slice(11, 19) + " UTC";
         const wwBody = {
           barcodeValue: galleryUrl, barcodeFormat: "QR",
-          logoText: "StatusPass", description: "Homepage Redesign · Demo",
+          logoText: "StatusPass", description: "Homepage Redesign — Acme Corp",
           organizationName: "StatusPass",
-          headerFields: [{ label: "CLIENT", value: "DEMO PROJECT" }],
+          headerFields: [{ label: "PROJECT", value: "Homepage Redesign" }],
           // Keep pass face identical — same primary/secondary as current phase
           primaryFields: [{ label: "CURRENT FOCUS", value: d.phase }],
           secondaryFields: [
@@ -573,9 +573,9 @@ export function startServer(overrides: Partial<{
         const wwBody = {
           // QR on the installed pass points to the demo gallery / mini-repo
           barcodeValue: galleryUrl, barcodeFormat: "QR",
-          logoText: "StatusPass", description: "Homepage Redesign · Demo",
+          logoText: "StatusPass", description: "Homepage Redesign — Acme Corp",
           organizationName: "StatusPass",
-          headerFields: [{ label: "CLIENT", value: "DEMO PROJECT" }],
+          headerFields: [{ label: "PROJECT", value: "Homepage Redesign" }],
           primaryFields: [{
             label: "CURRENT FOCUS",
             value: d.phase,
