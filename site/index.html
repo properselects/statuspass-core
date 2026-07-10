@@ -108,10 +108,31 @@ h1 em{font-style:normal;color:var(--live)}
 @keyframes scroll{to{transform:translateX(-50%)}}
 
 /* ── sections ── */
-section{padding:88px 0}
-.sect-head{max-width:600px;margin-bottom:48px}
+section{padding:clamp(56px,9vw,120px) 0;scroll-margin-top:72px}
+.sect-head{max-width:640px;margin-bottom:clamp(28px,4vw,52px)}
 h2{font-family:var(--display);font-weight:700;font-size:clamp(1.6rem,3vw,2.3rem);letter-spacing:-.015em;line-height:1.15;margin:12px 0 14px}
-.sect-head p{color:var(--mute);font-size:1.02rem}
+.sect-head p{color:var(--mute);font-size:clamp(.95rem,1.1vw,1.05rem);line-height:1.6}
+
+/* ── Fluid polish: softer easing, subtle depth, smoother interactions ── */
+:root{--ease:cubic-bezier(.22,.61,.36,1);--slow:cubic-bezier(.4,0,.2,1)}
+a,button,.btn,input,textarea,.pass,.pill,.tier,.persona,.step-card,.k-card,.k-col,.tk{transition:transform .35s var(--ease),background .35s var(--ease),color .3s var(--ease),border-color .3s var(--ease),box-shadow .35s var(--ease),opacity .3s var(--ease)}
+.btn{will-change:transform}
+.btn:hover{transform:translateY(-1px);box-shadow:0 12px 32px -12px rgba(201,169,106,.55)}
+.btn:active{transform:translateY(0)}
+.btn.ghost:hover{border-color:var(--foil);color:var(--foil)}
+.tier:hover,.persona:hover,.step-card:hover{transform:translateY(-3px);border-color:rgba(201,169,106,.35)}
+/* soft section dividers — gradient wash instead of hard edges */
+section+section{position:relative}
+section+section::before{content:"";position:absolute;left:50%;top:0;width:120px;height:1px;background:linear-gradient(90deg,transparent,var(--line),transparent);transform:translateX(-50%)}
+/* smoother .rv reveal */
+.rv{transition:opacity .8s var(--ease),transform .8s var(--ease)}
+/* subtle text selection */
+::selection{background:rgba(201,169,106,.28);color:var(--text)}
+/* hero flourish — soft glow behind the phone demo */
+.hero .demo{position:relative}
+.hero .demo::after{content:"";position:absolute;inset:-40px -20px -20px -20px;background:radial-gradient(60% 50% at 50% 40%,rgba(201,169,106,.08),transparent 70%);pointer-events:none;z-index:-1;filter:blur(30px)}
+/* fluid form focus */
+input:focus,textarea:focus{border-color:var(--foil);box-shadow:0 0 0 4px rgba(201,169,106,.15)}
 
 /* how it works — ticket stubs */
 .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
