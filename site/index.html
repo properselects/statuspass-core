@@ -171,8 +171,10 @@ footer{border-top:1px solid var(--line);padding:30px 0 44px}
 footer .wrap{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
 footer .mono{font-size:.68rem;letter-spacing:.14em;color:var(--mute)}
 
-/* reveals */
-.rv{opacity:0;transform:translateY(18px);transition:opacity .6s ease,transform .6s ease}
+/* reveals — start visible, IntersectionObserver adds .in for a subtle fade-up.
+   The old default (opacity:0) hid sections entirely when the observer failed. */
+.rv{opacity:1;transform:none;transition:opacity .6s ease,transform .6s ease}
+.no-js-rv .rv{opacity:0;transform:translateY(18px)}
 .rv.in{opacity:1;transform:none}
 
 @media (prefers-reduced-motion:reduce){
@@ -586,9 +588,17 @@ const track=$("track"); track.innerHTML+=track.innerHTML;
   svg.innerHTML=cells+finder(0.5,0.5)+finder(0.5,15.5)+finder(15.5,0.5);
 })();
 
-// scroll reveals
-const io=new IntersectionObserver((es)=>es.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add("in"); io.unobserve(e.target);} }),{threshold:.12});
-document.querySelectorAll(".rv").forEach(el=>io.observe(el));
+// scroll reveals — opt in only if IntersectionObserver is supported.
+// Sections are visible by default so failed JS never hides the page.
+if ("IntersectionObserver" in window) {
+  document.documentElement.classList.add("no-js-rv");
+  const io = new IntersectionObserver((es) => es.forEach(e => {
+    if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+  }), { threshold: .12 });
+  document.querySelectorAll(".rv").forEach(el => io.observe(el));
+  // Failsafe: after 400ms mark all .rv as in (in case observer never fires above the fold)
+  setTimeout(() => document.querySelectorAll(".rv:not(.in)").forEach(el => el.classList.add("in")), 400);
+}
 </script>
 </body>
 </html>
