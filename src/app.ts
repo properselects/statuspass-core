@@ -416,47 +416,12 @@ export function startServer(overrides: Partial<{
       return;
     }
 
-    // Console UI + API
-    if (req.method === "GET" && url.pathname === "/console") {
-      const session = sessionFromCookie(req.headers.cookie, config.linkTokenSecret);
-      const hasLegacyKey = !!url.searchParams.get("key");
-      if (!session.ok && !hasLegacyKey && config.consoleToken) {
-        res.writeHead(302, { location: "/login" }).end();
-        logRequest("GET", url.pathname, 302, startedAt, ip);
-        return;
-      }
-      end(200, { "content-type": "text/html; charset=utf-8" }, renderConsolePage());
-      return;
-    }
-    if (url.pathname.startsWith("/api/")) {
-      const isUpload = url.pathname.endsWith("/deliverables/upload");
-      const raw = await readBody(req, isUpload ? BODY_LIMITS.upload : BODY_LIMITS.json);
-      const session = sessionFromCookie(req.headers.cookie, config.linkTokenSecret);
-      const out = await handleConsoleApi(
-        { method: req.method ?? "GET", path: url.pathname, query: url.searchParams,
-          rawBody: raw, contentType: req.headers["content-type"], auth: req.headers.authorization,
-          sessionAccountId: session.ok ? session.accountId : undefined },
-        { stores, deps, model, brandingStore, config: {
-            consoleToken: config.consoleToken, publicBaseUrl: config.publicBaseUrl,
-            linkTokenSecret: config.linkTokenSecret, defaultAccountId: config.defaultAccountId } },
-      );
-      if (out) end(out.status, { "content-type": out.contentType }, out.body);
-      else end(404, {}, "not found");
-      return;
-    }
-
-    if (url.pathname === "/healthz") {
-      end(200, {}, "ok");
-      return;
-    }
-
-    // ── Public landing page demo endpoints ──
+    // ── Public demo endpoints (no auth needed) ──
     const demoSerial = process.env.DEMO_PASS_SERIAL ?? "";
     const demoShareUrl = process.env.DEMO_PASS_SHARE_URL ?? "";
     const wwKey = process.env.WALLETWALLET_API_KEY ?? "";
 
     if (req.method === "GET" && url.pathname === "/api/demo/pass") {
-      // Returns the demo pass share URL for QR code generation
       if (!demoShareUrl) { end(503, { "content-type": "application/json" }, JSON.stringify({ error: "demo not configured" })); return; }
       end(200, { "content-type": "application/json", "cache-control": "public,max-age=86400" },
         JSON.stringify({ shareUrl: demoShareUrl, serial: demoSerial }));
@@ -464,7 +429,6 @@ export function startServer(overrides: Partial<{
     }
 
     if (req.method === "POST" && url.pathname === "/api/demo/move") {
-      // Pushes a real update to the shared demo pass via WalletWallet
       if (!demoSerial || !wwKey) { end(503, { "content-type": "application/json" }, JSON.stringify({ error: "demo not configured" })); return; }
       const DEMO_PHASES: Record<string, { phase: string; pct: string; status: string; msg: string }> = {
         "0": { phase: "DISCOVERY",  pct: "0% COMPLETE",   status: "ON TRACK",     msg: "Discovery is underway — goals and scope are being mapped." },
@@ -496,6 +460,40 @@ export function startServer(overrides: Partial<{
         if (!res.ok) { end(502, { "content-type": "application/json" }, JSON.stringify({ error: `WW error ${res.status}` })); return; }
         end(200, { "content-type": "application/json" }, JSON.stringify({ ok: true, phase: d.phase, msg: d.msg }));
       } catch (e: any) { end(500, { "content-type": "application/json" }, JSON.stringify({ error: e.message })); }
+      return;
+    }
+
+    // Console UI + API
+    if (req.method === "GET" && url.pathname === "/console") {
+      const session = sessionFromCookie(req.headers.cookie, config.linkTokenSecret);
+      const hasLegacyKey = !!url.searchParams.get("key");
+      if (!session.ok && !hasLegacyKey && config.consoleToken) {
+        res.writeHead(302, { location: "/login" }).end();
+        logRequest("GET", url.pathname, 302, startedAt, ip);
+        return;
+      }
+      end(200, { "content-type": "text/html; charset=utf-8" }, renderConsolePage());
+      return;
+    }
+    if (url.pathname.startsWith("/api/")) {
+      const isUpload = url.pathname.endsWith("/deliverables/upload");
+      const raw = await readBody(req, isUpload ? BODY_LIMITS.upload : BODY_LIMITS.json);
+      const session = sessionFromCookie(req.headers.cookie, config.linkTokenSecret);
+      const out = await handleConsoleApi(
+        { method: req.method ?? "GET", path: url.pathname, query: url.searchParams,
+          rawBody: raw, contentType: req.headers["content-type"], auth: req.headers.authorization,
+          sessionAccountId: session.ok ? session.accountId : undefined },
+        { stores, deps, model, brandingStore, config: {
+            consoleToken: config.consoleToken, publicBaseUrl: config.publicBaseUrl,
+            linkTokenSecret: config.linkTokenSecret, defaultAccountId: config.defaultAccountId } },
+      );
+      if (out) end(out.status, { "content-type": out.contentType }, out.body);
+      else end(404, {}, "not found");
+      return;
+    }
+
+    if (url.pathname === "/healthz") {
+      end(200, {}, "ok");
       return;
     }
 
