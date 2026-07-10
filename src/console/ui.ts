@@ -271,13 +271,13 @@ function showIssue(){
 // ── First-run onboarding: three steps, one action each ──
 function showOnboarding(step=1, demoLink=null){
   const dots = '<div class="dots">'+[1,2,3].map(i=>'<i class="'+(i<=step?'on':'')+'"></i>').join('')+'</div>';
-  const skip = '<button class="skip" id="skip">Skip — I\'ll explore on my own</button>';
+  const skip = '<button class="skip" id="skip">Skip — I\\'ll explore on my own</button>';
   let html = '';
   if (step===1){
     html = '<div class="ob"><div class="step">HOW STATUSPASS WORKS</div>'+
-      '<h2>Your client\'s project status,<br>living in their wallet.</h2>'+
+      '<h2>Your client\\'s project status,<br>living in their wallet.</h2>'+
       '<p>No app. No login. You update once — their lock screen shows a clean, client-safe sentence.</p>'+
-      '<p>Let\'s prove it on your own phone. It takes about a minute.</p>'+
+      '<p>Let\\'s prove it on your own phone. It takes about a minute.</p>'+
       dots+'<button class="btn" id="next">Show me</button>'+skip+'</div>';
   } else if (step===2){
     html = '<div class="ob"><div class="step">STEP 1 OF 2</div>'+
@@ -285,15 +285,15 @@ function showOnboarding(step=1, demoLink=null){
       (demoLink
         ? '<p>Open this link on your phone. Add any logo, pick a color, save — then tap <b style="color:var(--text)">Add to your wallet</b>.</p>'+
           '<code>'+esc(demoLink)+'</code><button class="btn ghost" id="copy">Copy link</button>'+
-          dots+'<button class="btn" id="next">Done — it\'s in my wallet</button>'
-        : '<p>We\'ll create a demo pass addressed to you.</p>'+
+          dots+'<button class="btn" id="next">Done — it\\'s in my wallet</button>'
+        : '<p>We\\'ll create a demo pass addressed to you.</p>'+
           dots+'<button class="btn" id="make">Create my demo pass</button>')+
       '<div class="msg" id="m"></div>'+skip+'</div>';
   } else {
     html = '<div class="ob"><div class="step">STEP 2 OF 2</div>'+
       '<h2>Now make your phone buzz</h2>'+
       '<p>Go to the <b style="color:var(--text)">Board</b> tab and drag your demo pass to the next phase. Add a short note if you like.</p>'+
-      '<p>Within seconds, your lock screen shows the update. That\'s the whole product.</p>'+
+      '<p>Within seconds, your lock screen shows the update. That\\'s the whole product.</p>'+
       dots+'<button class="btn" id="board">Open the Board</button>'+skip+'</div>';
   }
   view.innerHTML = html;
