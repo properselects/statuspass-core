@@ -39,12 +39,10 @@ describe("console", () => {
     expect(res.status).toBe(200);
     const html = await res.text();
     expect(html).toContain("StatusPass");
-    expect(html).toContain("Issue a pass");
-    // onboarding flow present: three steps, skip path, board handoff
-    expect(html).toContain("HOW STATUSPASS WORKS");
-    expect(html).toContain("Put a pass on your phone");
-    expect(html).toContain("Now make your phone buzz");
-    expect(html).toContain("sp_onboarded");
+    expect(html).toContain("Add Client");
+    expect(html).toContain("showClients");
+    expect(html).toContain("showBoard");
+    expect(html).toContain("sp_key");
   });
 
   it("rejects API calls without the console key", async () => {

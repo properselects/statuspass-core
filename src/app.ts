@@ -3,6 +3,9 @@
 // into one bootable server. Everything external stays behind an interface.
 
 import { createServer } from "node:http";
+import { readFileSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { ModelClient, ModelRouting, Pass, RagStatus } from "./types.js";
 import type { PipelineDeps } from "./pipeline.js";
 import type { ResolvedLink } from "./pipeline.js";
@@ -130,6 +133,10 @@ export function buildPipelineDeps(args: {
     notifyOperator,
   };
 }
+
+const _dir = dirname(fileURLToPath(import.meta.url));
+let landingHtml = "";
+try { landingHtml = readFileSync(join(_dir, "../../site/index.html"), "utf8"); } catch { landingHtml = ""; }
 
 export function startServer(overrides: Partial<{
   config: AppConfig; stores: Stores; delivery: PassDeliveryAdapter; model: ModelClient;
@@ -440,6 +447,10 @@ export function startServer(overrides: Partial<{
 
     if (url.pathname === "/healthz") {
       end(200, {}, "ok");
+      return;
+    }
+    if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) {
+      end(200, { "content-type": "text/html; charset=utf-8" }, landingHtml);
       return;
     }
     end(404, {}, "not found");

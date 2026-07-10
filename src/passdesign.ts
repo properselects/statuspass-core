@@ -122,7 +122,7 @@ export function buildPassSpec(
   // Field-tested layout: steady brand color for clients (teal reads calm and
   // premium); internal passes shift with RAG.
   const backgroundColor = isClient
-    ? branding.brandColor ?? "#5B8E8B"
+    ? branding.brandColor ?? "#1B212E"
     : content.rag ? RAG_BG[content.rag] : NEUTRAL_DARK;
 
   const pct = phaseOrder.length >= 2 ? progressPct(profile, content.phase, phaseOrder) : null;
